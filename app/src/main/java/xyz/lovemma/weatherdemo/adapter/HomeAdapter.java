@@ -1,6 +1,7 @@
 package xyz.lovemma.weatherdemo.adapter;
 
 import android.content.Context;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,8 +12,11 @@ import android.widget.TextView;
 
 import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
+import xyz.lovemma.weatherdemo.adapter.viewHolder.baseViewHolder;
+import xyz.lovemma.weatherdemo.entity.DailyForecast;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.utils.DateUtil;
+import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 
 /**
  * Created by OO on 2017/5/19.
@@ -27,7 +31,7 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private HeWeather5 mWeather;
     private Context mContext;
-
+    private SharedPreferencesUtil mSharedPreferencesUtil;
 
     public HomeAdapter(HeWeather5 weather) {
         mWeather = weather;
@@ -36,6 +40,7 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         mContext = parent.getContext();
+        mSharedPreferencesUtil = new SharedPreferencesUtil(mContext);
         switch (viewType) {
             case ITEM_TYPE_NOW:
                 return new NowViewHolder(LayoutInflater.from(mContext).inflate(R.layout.now, parent, false));
@@ -112,6 +117,7 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         @Override
         protected void bind(HeWeather5 heWeather5) {
+            icon.setImageResource((int) mSharedPreferencesUtil.get(heWeather5.getNow().getCond().getTxt(), R.drawable.ic_unknow));
             tmp.setText(heWeather5.getNow().getTmp() + "℃");
             city.setText(heWeather5.getBasic().getCity());
             cond.setText(heWeather5.getNow().getCond().getTxt());
@@ -140,33 +146,17 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     class HourlyViewHolder extends baseViewHolder<HeWeather5> {
         @BindView(R.id.hourly_forecast)
-        LinearLayout hourlyForecast;
-        int size = mWeather.getHourly_forecast().size();
-        private TextView[] cond = new TextView[size];
-        private ImageView[] condIcon = new ImageView[size];
-        private TextView[] time = new TextView[size];
+        RecyclerView hourlyForecast;
 
         public HourlyViewHolder(View itemView) {
             super(itemView);
-
-            for (int i = 0; i < size; i++) {
-                View view = View.inflate(mContext, R.layout.item_hourly_forecast, null);
-                cond[i] = (TextView) view.findViewById(R.id.cond);
-                condIcon[i] = (ImageView) view.findViewById(R.id.cond_icon);
-                time[i] = (TextView) view.findViewById(R.id.time);
-                hourlyForecast.addView(view);
-            }
         }
 
         @Override
         protected void bind(HeWeather5 heWeather5) {
-            for (int i = 0; i < size; i++) {
-                cond[i].setText(heWeather5.getHourly_forecast().get(i).getCond().getTxt());
-
-                String mDate = heWeather5.getHourly_forecast().get(i).getDate();
-                time[i].setText(
-                        mDate.substring(mDate.length() - 5, mDate.length()));
-            }
+            HourlyForecastAdapter adapter = new HourlyForecastAdapter(heWeather5.getHourly_forecast());
+            hourlyForecast.setLayoutManager(new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, false));
+            hourlyForecast.setAdapter(adapter);
         }
     }
 
@@ -193,23 +183,26 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         @Override
         protected void bind(HeWeather5 heWeather5) {
+
             for (int i = 0; i < size; i++) {
+                DailyForecast dailyForecast = heWeather5.getDaily_forecast().get(i);
                 if (i == 0) {
                     date[i].setText("今天");
                 } else {
-                    date[i].setText(DateUtil.dayForWeek(heWeather5.getDaily_forecast().get(i).getDate()));
+                    date[i].setText(DateUtil.dayForWeek(dailyForecast.getDate()));
                 }
+                icon[i].setImageResource((int) mSharedPreferencesUtil.get(dailyForecast.getCond().getTxt_d(), R.drawable.ic_unknow));
                 temp[i].setText(
                         String.format("%s℃ - %s℃",
-                                heWeather5.getDaily_forecast().get(i).getTmp().getMin(),
-                                heWeather5.getDaily_forecast().get(i).getTmp().getMax()));
+                                dailyForecast.getTmp().getMin(),
+                                dailyForecast.getTmp().getMax()));
                 txt[i].setText(
                         String.format("%s。 %s %s %s km/h。 降水几率 %s%%。",
-                                heWeather5.getDaily_forecast().get(i).getCond().getTxt_d(),
-                                heWeather5.getDaily_forecast().get(i).getWind().getSc(),
-                                heWeather5.getDaily_forecast().get(i).getWind().getDir(),
-                                heWeather5.getDaily_forecast().get(i).getWind().getSpd(),
-                                heWeather5.getDaily_forecast().get(i).getPop()));
+                                dailyForecast.getCond().getTxt_d(),
+                                dailyForecast.getWind().getSc(),
+                                dailyForecast.getWind().getDir(),
+                                dailyForecast.getWind().getSpd(),
+                                dailyForecast.getPop()));
             }
         }
     }
