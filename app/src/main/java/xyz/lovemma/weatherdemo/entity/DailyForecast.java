@@ -217,22 +217,22 @@ public class DailyForecast {
          * min : 20
          */
 
-        private String max;
-        private String min;
+        private int max;
+        private int min;
 
-        public String getMax() {
+        public int getMax() {
             return max;
         }
 
-        public void setMax(String max) {
+        public void setMax(int max) {
             this.max = max;
         }
 
-        public String getMin() {
+        public int getMin() {
             return min;
         }
 
-        public void setMin(String min) {
+        public void setMin(int min) {
             this.min = min;
         }
     }
