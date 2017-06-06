@@ -35,6 +35,10 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         mWeather = weather;
     }
 
+    public void setWeather(HeWeather5 weather) {
+        mWeather = weather;
+    }
+
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         mContext = parent.getContext();

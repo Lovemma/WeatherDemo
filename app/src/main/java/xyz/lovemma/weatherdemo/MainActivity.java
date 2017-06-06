@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -22,12 +21,14 @@ import android.view.View;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+import io.reactivex.Observer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.adapter.HomeAdapter;
+import xyz.lovemma.weatherdemo.api.RetrofitUtils;
+import xyz.lovemma.weatherdemo.db.City;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.entity.Weather;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
@@ -46,56 +47,75 @@ public class MainActivity extends AppCompatActivity
     NavigationView navigationView;
     private HomeAdapter mHomeAdapter;
     private SharedPreferencesUtil sharedPreferencesUtil;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         initView();
+        initIcon();
         initData();
         initDrawer();
-        initIcon();
     }
+
+    LinearLayoutManager layoutManager;
 
     private void initView() {
         setSupportActionBar(toolbar);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        layoutManager = new LinearLayoutManager(this);
+        layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        mRecyclerView.setLayoutManager(layoutManager);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                requestWeather("成都");
             }
         });
     }
 
     private void initData() {
-        Retrofit retrofit =
-                new Retrofit.Builder()
-                        .baseUrl("https://free-api.heweather.com")
-                        .addConverterFactory(GsonConverterFactory.create())
-                        .build();
-        Api api = retrofit.create(Api.class);
-        Call<Weather> call = api.getWeatherList("自贡", "282f3846df6b41178e4a2218ae083ea7");
-        call.enqueue(new Callback<Weather>() {
-            @Override
-            public void onResponse(Call<Weather> call, final Response<Weather> response) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
+        String currentCity = (String) sharedPreferencesUtil.get("current_city", "自贡");
+        requestWeather(currentCity);
+    }
 
-                        mHomeAdapter = new HomeAdapter(response.body().getHeWeather5().get(0));
-                        mRecyclerView.setAdapter(mHomeAdapter);
-                        setNotification(response.body().getHeWeather5().get(0));
+    public void requestWeather(String city) {
+        RetrofitUtils.getInstance().fetchWeather(city)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<Weather>() {
+                    @Override
+                    public void onSubscribe(@NonNull Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(@NonNull Weather weather) {
+                        showWeatherInfo(weather);
+                    }
+
+                    @Override
+                    public void onError(@NonNull Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+
                     }
                 });
-            }
+    }
 
-            @Override
-            public void onFailure(Call<Weather> call, Throwable t) {
-
-            }
-        });
+    private void showWeatherInfo(Weather weather) {
+        if (mHomeAdapter == null) {
+            mHomeAdapter = new HomeAdapter(weather.getHeWeather5().get(0));
+            mRecyclerView.setAdapter(mHomeAdapter);
+        } else {
+            mHomeAdapter.setWeather(weather.getHeWeather5().get(0));
+            mHomeAdapter.notifyItemRangeChanged(0, mHomeAdapter.getItemCount());
+            mRecyclerView.smoothScrollToPosition(0);
+        }
+        setNotification(weather.getHeWeather5().get(0));
     }
 
     private void setNotification(HeWeather5 weather) {
@@ -108,7 +128,7 @@ public class MainActivity extends AppCompatActivity
                 .setContentTitle(weather.getBasic().getCity())
                 .setContentText(String.format("%s 当前温度: %s℃ ", weather.getNow().getCond().getTxt(), weather.getNow().getTmp()))
                 // 这里部分 ROM 无法成功
-                .setSmallIcon((int) sharedPreferencesUtil.get(weather.getNow().getCond().getTxt(),R.drawable.ic_unknow))
+                .setSmallIcon((int) sharedPreferencesUtil.get(weather.getNow().getCond().getTxt(), R.drawable.ic_unknow))
                 .build();
         notification.flags = Notification.FLAG_ONGOING_EVENT;
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -175,6 +195,19 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            switch (requestCode) {
+                case CHOICE_CITY:
+                    City city = data.getParcelableExtra("choice_city");
+                    requestWeather(city.getCityZh());
+                    break;
+            }
+        }
+    }
+
+    @Override
     public void onBackPressed() {
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
@@ -205,12 +238,20 @@ public class MainActivity extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
+    private static final String TAG = "MainActivity";
+    public static final int CHOICE_CITY = 10086;
+
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
-
+        switch (id) {
+            case R.id.nav_location_city:
+                Intent intent = new Intent(getApplicationContext(), ChoiceCityActivity.class);
+                startActivityForResult(intent, CHOICE_CITY);
+                break;
+        }
 
         drawer.closeDrawer(GravityCompat.START);
         return true;

@@ -1,6 +1,6 @@
-package xyz.lovemma.weatherdemo;
+package xyz.lovemma.weatherdemo.api;
 
-import retrofit2.Call;
+import io.reactivex.Observable;
 import retrofit2.http.GET;
 import retrofit2.http.Query;
 import xyz.lovemma.weatherdemo.entity.Weather;
@@ -11,5 +11,5 @@ import xyz.lovemma.weatherdemo.entity.Weather;
 
 public interface Api {
     @GET("/v5/weather")
-    Call<Weather> getWeatherList(@Query("city")  String c,@Query("key")String key);
+    Observable<Weather> getWeatherList(@Query("city")  String c, @Query("key")String key);
 }

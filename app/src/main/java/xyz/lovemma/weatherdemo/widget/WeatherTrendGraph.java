@@ -48,18 +48,12 @@ public class WeatherTrendGraph extends View {
         invalidate();
     }
 
-    @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
-        this.width = w;
-        this.height = h;
-    }
-
     public WeatherTrendGraph(Context context, AttributeSet attrs) {
         super(context, attrs);
         mContext = context;
         initPaint();
         sharedPreferencesUtil = new SharedPreferencesUtil(context);
+
     }
 
     private TextPaint mTextPaint;
@@ -150,6 +144,9 @@ public class WeatherTrendGraph extends View {
 
     private void drawLine(Canvas canvas) {
         float X, Y, offsetPercent;
+        maxTmpPath.reset();
+        minTmpPath.reset();
+
         //高温折线
         for (int i = 0; i < mWeathers.size(); i++) {
             X = xInterval * i + xInterval / 2;
