@@ -1,4 +1,4 @@
-package xyz.lovemma.weatherdemo.adapter;
+package xyz.lovemma.weatherdemo.ui.adapter;
 
 import android.content.Context;
 import android.support.v7.widget.CardView;
@@ -12,7 +12,7 @@ import java.util.List;
 
 import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
-import xyz.lovemma.weatherdemo.adapter.viewHolder.baseViewHolder;
+import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 import xyz.lovemma.weatherdemo.db.City;
 
 public class CityAdapter extends RecyclerView.Adapter<CityAdapter.CityViewHolder> {

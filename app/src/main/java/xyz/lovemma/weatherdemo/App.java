@@ -22,8 +22,8 @@ import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
  */
 
 public class App extends Application {
-    private MyDataBaseHelper mDataBaseHelper;
     private SQLiteDatabase db;
+    private MyDataBaseHelper mDataBaseHelper;
 
     @Override
     public void onCreate() {
@@ -39,6 +39,7 @@ public class App extends Application {
                 }
             }).start();
         }
+        cursor.close();
     }
 
     private String getJson(String fileName) {

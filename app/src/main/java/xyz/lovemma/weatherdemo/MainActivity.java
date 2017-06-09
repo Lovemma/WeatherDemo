@@ -5,48 +5,48 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
+import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import io.reactivex.Observer;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.annotations.NonNull;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
-import xyz.lovemma.weatherdemo.adapter.HomeAdapter;
-import xyz.lovemma.weatherdemo.api.RetrofitUtils;
 import xyz.lovemma.weatherdemo.db.City;
+import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.entity.Weather;
+import xyz.lovemma.weatherdemo.ui.adapter.CityPagerAdapter;
+import xyz.lovemma.weatherdemo.ui.adapter.HomeAdapter;
+import xyz.lovemma.weatherdemo.ui.fragment.CityFragment;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
-    @BindView(R.id.weather_recycler)
-    RecyclerView mRecyclerView;
     @BindView(R.id.toolbar)
     Toolbar toolbar;
-    @BindView(R.id.fab)
-    FloatingActionButton fab;
     @BindView(R.id.drawer_layout)
     DrawerLayout drawer;
     @BindView(R.id.nav_view)
     NavigationView navigationView;
+    @BindView(R.id.viewPager)
+    ViewPager viewPager;
     private HomeAdapter mHomeAdapter;
     private SharedPreferencesUtil sharedPreferencesUtil;
+    private CityPagerAdapter mPagerAdapter;
+    private SQLiteDatabase db;
+    private MyDataBaseHelper mDataBaseHelper;
+    private static final String TAG = "MainActivity";
+    public static final int CHOICE_CITY = 1;
+    public static final int MULTI_CITY = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,65 +55,39 @@ public class MainActivity extends AppCompatActivity
         ButterKnife.bind(this);
         initView();
         initIcon();
-        initData();
         initDrawer();
     }
 
-    LinearLayoutManager layoutManager;
-
     private void initView() {
         setSupportActionBar(toolbar);
-        layoutManager = new LinearLayoutManager(this);
-        layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
-        mRecyclerView.setLayoutManager(layoutManager);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                requestWeather("成都");
-            }
-        });
+
+        mPagerAdapter = new CityPagerAdapter(getSupportFragmentManager());
+        loadCityFromDB();
+        viewPager.setAdapter(mPagerAdapter);
     }
 
-    private void initData() {
-        String currentCity = (String) sharedPreferencesUtil.get("current_city", "自贡");
-        requestWeather(currentCity);
-    }
-
-    public void requestWeather(String city) {
-        RetrofitUtils.getInstance().fetchWeather(city)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Observer<Weather>() {
-                    @Override
-                    public void onSubscribe(@NonNull Disposable d) {
-
-                    }
-
-                    @Override
-                    public void onNext(@NonNull Weather weather) {
-                        showWeatherInfo(weather);
-                    }
-
-                    @Override
-                    public void onError(@NonNull Throwable e) {
-
-                    }
-
-                    @Override
-                    public void onComplete() {
-
-                    }
-                });
+    private void loadCityFromDB() {
+        mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
+        db = mDataBaseHelper.getWritableDatabase();
+        Cursor cursor = db.query("MutiliCity", null, null, null, null, null, null);
+        if (cursor.moveToFirst()) {
+            do {
+                String city = cursor.getString(cursor.getColumnIndex("city"));
+                mPagerAdapter.addFragment(CityFragment.newInstance(city));
+            } while (cursor.moveToNext());
+        } else {
+            Intent intent = new Intent(this, ChoiceCityActivity.class);
+            startActivityForResult(intent, CHOICE_CITY);
+        }
+        cursor.close();
     }
 
     private void showWeatherInfo(Weather weather) {
         if (mHomeAdapter == null) {
             mHomeAdapter = new HomeAdapter(weather.getHeWeather5().get(0));
-            mRecyclerView.setAdapter(mHomeAdapter);
         } else {
             mHomeAdapter.setWeather(weather.getHeWeather5().get(0));
             mHomeAdapter.notifyItemRangeChanged(0, mHomeAdapter.getItemCount());
-            mRecyclerView.smoothScrollToPosition(0);
         }
         setNotification(weather.getHeWeather5().get(0));
     }
@@ -201,8 +175,13 @@ public class MainActivity extends AppCompatActivity
             switch (requestCode) {
                 case CHOICE_CITY:
                     City city = data.getParcelableExtra("choice_city");
-                    requestWeather(city.getCityZh());
+                    mPagerAdapter.addFragment(CityFragment.newInstance(city.getCityZh()));
+                    mPagerAdapter.notifyDataSetChanged();
                     break;
+                case MULTI_CITY:
+                    int position = data.getIntExtra("position", 0);
+                    viewPager.setCurrentItem(position);
+
             }
         }
     }
@@ -238,19 +217,22 @@ public class MainActivity extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
-    private static final String TAG = "MainActivity";
-    public static final int CHOICE_CITY = 10086;
-
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
+        Intent intent;
         switch (id) {
-            case R.id.nav_location_city:
-                Intent intent = new Intent(getApplicationContext(), ChoiceCityActivity.class);
+            case R.id.nav_choice_city:
+                intent = new Intent(this, ChoiceCityActivity.class);
                 startActivityForResult(intent, CHOICE_CITY);
                 break;
+            case R.id.nav_location_city:
+                intent = new Intent(this, MulitiCityActivity.class);
+                startActivity(intent);
+                break;
+
         }
 
         drawer.closeDrawer(GravityCompat.START);

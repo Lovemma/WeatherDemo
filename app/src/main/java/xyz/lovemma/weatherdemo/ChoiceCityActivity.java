@@ -1,5 +1,6 @@
 package xyz.lovemma.weatherdemo;
 
+import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -17,17 +18,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
-import com.google.gson.Gson;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import xyz.lovemma.weatherdemo.adapter.CityAdapter;
 import xyz.lovemma.weatherdemo.db.City;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
-import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
+import xyz.lovemma.weatherdemo.ui.adapter.CityAdapter;
 
 public class ChoiceCityActivity extends AppCompatActivity {
 
@@ -37,10 +35,9 @@ public class ChoiceCityActivity extends AppCompatActivity {
     Toolbar mToolbar;
     @BindView(R.id.textView)
     TextView mTextView;
-    private MyDataBaseHelper mDataBaseHelper;
     private SQLiteDatabase db;
+    private MyDataBaseHelper mDataBaseHelper;
     private List<City> mCityList = new ArrayList<>();
-    private Gson mGson = new Gson();
     private CityAdapter mAdapter;
     private static final String TAG = "ChoiceCityActivity";
 
@@ -55,7 +52,6 @@ public class ChoiceCityActivity extends AppCompatActivity {
         mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
         db = mDataBaseHelper.getWritableDatabase();
 
-
         mAdapter = new CityAdapter(mCityList);
         mAdapter.setOnItemClickListener(new CityAdapter.OnRecyclerViewItemClickListener() {
             @Override
@@ -64,8 +60,10 @@ public class ChoiceCityActivity extends AppCompatActivity {
                 Intent intent = new Intent(ChoiceCityActivity.this, MainActivity.class);
                 intent.putExtra("choice_city", mCityList.get(pos));
                 setResult(RESULT_OK, intent);
-                SharedPreferencesUtil sharedPreferencesUtil = new SharedPreferencesUtil(getApplicationContext());
-                sharedPreferencesUtil.put("current_city", mCityList.get(pos).getCityZh());
+                ContentValues values = new ContentValues();
+                values.put("city", mCityList.get(pos).getCityZh());
+                values.put("cond", "");
+                db.insert("MutiliCity", null, values);
                 onBackPressed();
             }
         });
@@ -112,7 +110,7 @@ public class ChoiceCityActivity extends AppCompatActivity {
             return;
         }
         mAdapter.clearData();
-        Cursor cursor = db.query("City", null, "cityZh like ? or cityEn like ?", new String[]{"%"+city+"%","%"+city+"%"}, null, null, null);
+        Cursor cursor = db.query("City", null, "cityZh like ? or cityEn like ?", new String[]{"%" + city + "%", "%" + city + "%"}, null, null, null);
         if (cursor.moveToFirst()) {
             do {
                 String id = cursor.getString(cursor.getColumnIndex("id"));
@@ -130,11 +128,11 @@ public class ChoiceCityActivity extends AppCompatActivity {
 
                 mCityList.add(new City(id, cityEn, cityZh, countryCode, countryEn, countryZh, provinceEn, provinceZh, leaderEn, leaderZh, lat, lon));
             } while (cursor.moveToNext());
-            cursor.close();
             mTextView.setVisibility(View.GONE);
         } else {
             mTextView.setVisibility(View.VISIBLE);
         }
+        cursor.close();
         mAdapter.notifyDataSetChanged();
     }
 }

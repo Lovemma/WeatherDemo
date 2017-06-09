@@ -36,20 +36,24 @@ public class MyDataBaseHelper extends SQLiteOpenHelper {
             + "leaderZh text, "
             + "lat real, "
             + "lon real)";
+    public static final String MUTILI_CITY = "create table MutiliCity ("
+            + "id integer primary key autoincrement, "
+            + "city text, "
+            + "temp text, "
+            + "cond text)";
 
-    private Context mContext;
     public MyDataBaseHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
-        mContext = context;
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(CREATE_CITY);
+        db.execSQL(MUTILI_CITY);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-
     }
+
 }

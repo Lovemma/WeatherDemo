@@ -1,4 +1,4 @@
-package xyz.lovemma.weatherdemo.adapter;
+package xyz.lovemma.weatherdemo.ui.adapter;
 
 import android.content.Context;
 import android.support.v7.widget.LinearLayoutManager;
@@ -11,7 +11,7 @@ import android.widget.TextView;
 
 import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
-import xyz.lovemma.weatherdemo.adapter.viewHolder.baseViewHolder;
+import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 import xyz.lovemma.weatherdemo.widget.WeatherTrendGraph;
@@ -51,7 +51,7 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             case ITEM_TYPE_HOURLY:
                 return new HourlyViewHolder(LayoutInflater.from(mContext).inflate(R.layout.hourly_forecast, parent, false));
             case ITEM_TYPE_DAILY:
-                return new DailyViewHolder(LayoutInflater.from(mContext).inflate(R.layout.daily_forecast, parent, false));
+                return new DailyViewHolder(LayoutInflater.from(mContext).inflate(R.layout.item_daily_forecast, parent, false));
             case ITEM_TYPE_SUGGESTION:
                 return new SuggertionViewHolder(LayoutInflater.from(mContext).inflate(R.layout.suggestion, parent, false));
         }
@@ -166,47 +166,14 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         @BindView(R.id.daily_forecast)
         WeatherTrendGraph dailyForecast;
         int size = mWeather.getDaily_forecast().size();
-        private ImageView[] icon = new ImageView[size];
-        private TextView[] date = new TextView[size];
-        private TextView[] temp = new TextView[size];
-        private TextView[] txt = new TextView[size];
 
         public DailyViewHolder(View itemView) {
             super(itemView);
-
-//            for (int i = 0; i < size; i++) {
-//                View view = View.inflate(mContext, R.layout.item_daily_forecast, null);
-//                icon[i] = (ImageView) view.findViewById(R.id.forecast_icon);
-//                date[i] = (TextView) view.findViewById(R.id.forecast_date);
-//                temp[i] = (TextView) view.findViewById(R.id.forecast_temp);
-//                txt[i] = (TextView) view.findViewById(R.id.forecast_txt);
-//                dailyForecast.addView(view);
-//            }
         }
 
         @Override
         protected void bind(HeWeather5 heWeather5) {
             dailyForecast.setWeathers(heWeather5.getDaily_forecast());
-//            for (int i = 0; i < size; i++) {
-//                DailyForecast dailyForecast = heWeather5.getDaily_forecast().get(i);
-//                if (i == 0) {
-//                    date[i].setText("今天");
-//                } else {
-//                    date[i].setText(DateUtil.dayForWeek(dailyForecast.getDate()));
-//                }
-//                icon[i].setImageResource((int) mSharedPreferencesUtil.get(dailyForecast.getCond().getTxt_d(), R.drawable.ic_unknow));
-//                temp[i].setText(
-//                        String.format("%s℃ - %s℃",
-//                                dailyForecast.getTmp().getMin(),
-//                                dailyForecast.getTmp().getMax()));
-//                txt[i].setText(
-//                        String.format("%s。 %s %s %s km/h。 降水几率 %s%%。",
-//                                dailyForecast.getCond().getTxt_d(),
-//                                dailyForecast.getWind().getSc(),
-//                                dailyForecast.getWind().getDir(),
-//                                dailyForecast.getWind().getSpd(),
-//                                dailyForecast.getPop()));
-//            }
         }
     }
 

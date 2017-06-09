@@ -1,4 +1,4 @@
-package xyz.lovemma.weatherdemo.adapter.viewHolder;
+package xyz.lovemma.weatherdemo.ui.adapter.viewHolder;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
