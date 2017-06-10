@@ -1,6 +1,5 @@
 package xyz.lovemma.weatherdemo.ui.adapter;
 
-import android.content.Context;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -12,12 +11,10 @@ import java.util.List;
 
 import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
-import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 import xyz.lovemma.weatherdemo.db.City;
+import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 
 public class CityAdapter extends RecyclerView.Adapter<CityAdapter.CityViewHolder> {
-
-    private Context mContext;
     private List<City> mDataList;
     private OnRecyclerViewItemClickListener mOnItemClickListener = null;
 
@@ -45,10 +42,6 @@ public class CityAdapter extends RecyclerView.Adapter<CityAdapter.CityViewHolder
     @Override
     public int getItemCount() {
         return mDataList.size();
-    }
-
-    public void clearData() {
-        mDataList.clear();
     }
 
     public void setOnItemClickListener(OnRecyclerViewItemClickListener listener) {

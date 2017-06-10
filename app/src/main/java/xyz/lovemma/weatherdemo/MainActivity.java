@@ -3,12 +3,15 @@ package xyz.lovemma.weatherdemo;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
@@ -20,7 +23,6 @@ import android.view.MenuItem;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import xyz.lovemma.weatherdemo.db.City;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.entity.Weather;
@@ -45,7 +47,7 @@ public class MainActivity extends AppCompatActivity
     private SQLiteDatabase db;
     private MyDataBaseHelper mDataBaseHelper;
     private static final String TAG = "MainActivity";
-    public static final int CHOICE_CITY = 1;
+
     public static final int MULTI_CITY = 2;
 
     @Override
@@ -56,6 +58,26 @@ public class MainActivity extends AppCompatActivity
         initView();
         initIcon();
         initDrawer();
+        initBroadcast();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mBroadcastManager.unregisterReceiver(mReceive);
+    }
+
+
+    private IntentFilter mIntentFilter;
+    private ViewPagerChangeReceive mReceive;
+    private LocalBroadcastManager mBroadcastManager;
+
+    private void initBroadcast() {
+        mIntentFilter = new IntentFilter();
+        mIntentFilter.addAction("xyz.lovemma.WeatherDemo.ViewPager_Change");
+        mReceive = new ViewPagerChangeReceive();
+        mBroadcastManager = LocalBroadcastManager.getInstance(this);
+        mBroadcastManager.registerReceiver(mReceive, mIntentFilter);
     }
 
     private void initView() {
@@ -75,9 +97,6 @@ public class MainActivity extends AppCompatActivity
                 String city = cursor.getString(cursor.getColumnIndex("city"));
                 mPagerAdapter.addFragment(CityFragment.newInstance(city));
             } while (cursor.moveToNext());
-        } else {
-            Intent intent = new Intent(this, ChoiceCityActivity.class);
-            startActivityForResult(intent, CHOICE_CITY);
         }
         cursor.close();
     }
@@ -173,15 +192,10 @@ public class MainActivity extends AppCompatActivity
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
             switch (requestCode) {
-                case CHOICE_CITY:
-                    City city = data.getParcelableExtra("choice_city");
-                    mPagerAdapter.addFragment(CityFragment.newInstance(city.getCityZh()));
-                    mPagerAdapter.notifyDataSetChanged();
-                    break;
+
                 case MULTI_CITY:
                     int position = data.getIntExtra("position", 0);
                     viewPager.setCurrentItem(position);
-
             }
         }
     }
@@ -224,18 +238,29 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
         Intent intent;
         switch (id) {
-            case R.id.nav_choice_city:
-                intent = new Intent(this, ChoiceCityActivity.class);
-                startActivityForResult(intent, CHOICE_CITY);
-                break;
             case R.id.nav_location_city:
                 intent = new Intent(this, MulitiCityActivity.class);
                 startActivity(intent);
                 break;
-
         }
 
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    class ViewPagerChangeReceive extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (intent.getIntExtra("change_viewpager", 0)) {
+                case 1:
+                    mPagerAdapter.addFragment(CityFragment.newInstance(intent.getStringExtra("city")));
+                    break;
+                case 2:
+
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }

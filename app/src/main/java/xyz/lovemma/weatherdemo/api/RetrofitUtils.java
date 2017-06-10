@@ -1,10 +1,12 @@
 package xyz.lovemma.weatherdemo.api;
 
+import android.support.annotation.NonNull;
+
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
@@ -44,6 +46,12 @@ public class RetrofitUtils {
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build();
         mApi = retrofit.create(Api.class);
+    }
+
+    public Observable<Weather> fetchWeather(String city) {
+        return mApi.getWeatherList(city, ApiConfig.KEY)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread());
     }
 
     public static void fetchWeather(String city, final WeatherCallBack callBack) {

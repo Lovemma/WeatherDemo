@@ -1,6 +1,5 @@
 package xyz.lovemma.weatherdemo.ui.adapter;
 
-import android.content.Context;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -13,7 +12,7 @@ import java.util.List;
 
 import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
-import xyz.lovemma.weatherdemo.entity.MulitiCity;
+import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 
 /**
@@ -21,24 +20,26 @@ import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
  */
 
 public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.MultiCityViewHolder> {
-    private Context mContext;
-    private List<MulitiCity> mCityList;
+    private List<HeWeather5> mWeatherList;
     private onMultiCityClickListener mClickListener;
 
-    public MutiliCityAdapter(List<MulitiCity> cityList) {
-        mCityList = cityList;
+    public MutiliCityAdapter(List<HeWeather5> weatherList) {
+        mWeatherList = weatherList;
+    }
+
+    public void setData(List<HeWeather5> weatherList) {
+        mWeatherList = weatherList;
     }
 
     @Override
     public MultiCityViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        mContext = parent.getContext();
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_multi_city, parent, false);
         return new MultiCityViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder( MultiCityViewHolder holder, int position) {
-        holder.bind(mCityList.get(position));
+    public void onBindViewHolder(MultiCityViewHolder holder, int position) {
+        holder.bind(mWeatherList.get(position));
         final int pos = position;
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -58,10 +59,10 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
 
     @Override
     public int getItemCount() {
-        return mCityList.size();
+        return mWeatherList.size();
     }
 
-    class MultiCityViewHolder extends baseViewHolder<MulitiCity> {
+    class MultiCityViewHolder extends baseViewHolder<HeWeather5> {
         @BindView(R.id.city)
         TextView city;
         @BindView(R.id.temp)
@@ -78,10 +79,10 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
         }
 
         @Override
-        protected void bind(MulitiCity mulitiCity) {
-            city.setText(mulitiCity.getCity());
-            temp.setText(mulitiCity.getTemp() + "°");
-            condTxt.setText(mulitiCity.getCond());
+        protected void bind(HeWeather5 heWeather5) {
+            city.setText(heWeather5.getBasic().getCity());
+            temp.setText(heWeather5.getNow().getTmp() + "°");
+            condTxt.setText(heWeather5.getNow().getCond().getTxt());
         }
     }
 }

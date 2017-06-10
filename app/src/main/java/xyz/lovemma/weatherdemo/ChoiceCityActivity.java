@@ -12,7 +12,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -23,6 +22,13 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.functions.Action;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.db.City;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 import xyz.lovemma.weatherdemo.ui.adapter.CityAdapter;
@@ -56,14 +62,16 @@ public class ChoiceCityActivity extends AppCompatActivity {
         mAdapter.setOnItemClickListener(new CityAdapter.OnRecyclerViewItemClickListener() {
             @Override
             public void onItemClick(View view, int pos) {
-//                Toast.makeText(ChoiceCityActivity.this, "position:" + mCityList.get(pos).getCityZh(), Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(ChoiceCityActivity.this, MainActivity.class);
-                intent.putExtra("choice_city", mCityList.get(pos));
+                Cursor cursor = db.query("MutiliCity", null,"city like ?", new String[]{"%" + mCityList.get(pos).getCityZh() + "%"}, null, null, null);
+                if (cursor.getCount() == 0) {
+                    ContentValues values = new ContentValues();
+                    values.put("city", mCityList.get(pos).getCityZh());
+                    db.insert("MutiliCity", null, values);
+                }
+                cursor.close();
+                Intent intent = new Intent(ChoiceCityActivity.this, MulitiCityActivity.class);
+                intent.putExtra("city", mCityList.get(pos).getCityZh());
                 setResult(RESULT_OK, intent);
-                ContentValues values = new ContentValues();
-                values.put("city", mCityList.get(pos).getCityZh());
-                values.put("cond", "");
-                db.insert("MutiliCity", null, values);
                 onBackPressed();
             }
         });
@@ -90,14 +98,12 @@ public class ChoiceCityActivity extends AppCompatActivity {
         mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                Log.d(TAG, "onQueryTextSubmit: " + query);
                 queryFromDB(query);
                 return false;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                Log.d(TAG, "onQueryTextChange: " + newText);
                 queryFromDB(newText);
                 return false;
             }
@@ -105,34 +111,59 @@ public class ChoiceCityActivity extends AppCompatActivity {
         return true;
     }
 
-    private void queryFromDB(String city) {
+    private void queryFromDB(final String city) {
         if (city.length() == 0) {
             return;
         }
-        mAdapter.clearData();
-        Cursor cursor = db.query("City", null, "cityZh like ? or cityEn like ?", new String[]{"%" + city + "%", "%" + city + "%"}, null, null, null);
-        if (cursor.moveToFirst()) {
-            do {
-                String id = cursor.getString(cursor.getColumnIndex("id"));
-                String cityEn = cursor.getString(cursor.getColumnIndex("cityEn"));
-                String cityZh = cursor.getString(cursor.getColumnIndex("cityZh"));
-                String countryCode = cursor.getString(cursor.getColumnIndex("countryCode"));
-                String countryEn = cursor.getString(cursor.getColumnIndex("countryEn"));
-                String countryZh = cursor.getString(cursor.getColumnIndex("countryZh"));
-                String provinceEn = cursor.getString(cursor.getColumnIndex("provinceEn"));
-                String provinceZh = cursor.getString(cursor.getColumnIndex("provinceZh"));
-                String leaderEn = cursor.getString(cursor.getColumnIndex("leaderEn"));
-                String leaderZh = cursor.getString(cursor.getColumnIndex("leaderZh"));
-                float lat = cursor.getFloat(cursor.getColumnIndex("lat"));
-                float lon = cursor.getFloat(cursor.getColumnIndex("lon"));
-
-                mCityList.add(new City(id, cityEn, cityZh, countryCode, countryEn, countryZh, provinceEn, provinceZh, leaderEn, leaderZh, lat, lon));
-            } while (cursor.moveToNext());
-            mTextView.setVisibility(View.GONE);
-        } else {
-            mTextView.setVisibility(View.VISIBLE);
-        }
-        cursor.close();
-        mAdapter.notifyDataSetChanged();
+        mCityList.clear();
+        Observable.create(new ObservableOnSubscribe<City>() {
+            @Override
+            public void subscribe(ObservableEmitter<City> e) throws Exception {
+                Cursor cursor = null;
+                try {
+                    cursor = db.query("City", null, "cityZh like ? or cityEn like ?", new String[]{"%" + city + "%", "%" + city + "%"}, null, null, null);
+                    if (cursor.moveToFirst()) {
+                        do {
+                            String id = cursor.getString(cursor.getColumnIndex("id"));
+                            String cityEn = cursor.getString(cursor.getColumnIndex("cityEn"));
+                            String cityZh = cursor.getString(cursor.getColumnIndex("cityZh"));
+                            String countryCode = cursor.getString(cursor.getColumnIndex("countryCode"));
+                            String countryEn = cursor.getString(cursor.getColumnIndex("countryEn"));
+                            String countryZh = cursor.getString(cursor.getColumnIndex("countryZh"));
+                            String provinceEn = cursor.getString(cursor.getColumnIndex("provinceEn"));
+                            String provinceZh = cursor.getString(cursor.getColumnIndex("provinceZh"));
+                            String leaderEn = cursor.getString(cursor.getColumnIndex("leaderEn"));
+                            String leaderZh = cursor.getString(cursor.getColumnIndex("leaderZh"));
+                            float lat = cursor.getFloat(cursor.getColumnIndex("lat"));
+                            float lon = cursor.getFloat(cursor.getColumnIndex("lon"));
+                            e.onNext(new City(id, cityEn, cityZh, countryCode, countryEn, countryZh, provinceEn, provinceZh, leaderEn, leaderZh, lat, lon));
+                        } while (cursor.moveToNext());
+                    }
+                } finally {
+                    if (cursor != null) cursor.close();
+                }
+                e.onComplete();
+            }
+        })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<City>() {
+                    @Override
+                    public void accept(City city) throws Exception {
+                        mCityList.add(city);
+                        mAdapter.notifyDataSetChanged();
+                    }
+                })
+                .doOnComplete(new Action() {
+                    @Override
+                    public void run() throws Exception {
+                        if (mCityList.size() == 0) {
+                            mTextView.setVisibility(View.VISIBLE);
+                        } else {
+                            mTextView.setVisibility(View.GONE);
+                        }
+                    }
+                })
+                .subscribe();
     }
 }

@@ -94,14 +94,7 @@ public class CityFragment extends Fragment implements WeatherCallBack {
         if (cursor.getCount() == 0) {
             values = new ContentValues();
             values.put("city", weather5.getBasic().getCity());
-            values.put("temp", weather5.getNow().getTmp());
-            values.put("cond", weather5.getNow().getCond().getTxt());
             db.insert("MutiliCity", null, values);
-        } else {
-            values = new ContentValues();
-            values.put("cond", weather5.getNow().getCond().getTxt());
-            values.put("temp", weather5.getNow().getTmp());
-            db.update("MutiliCity", values, "city = ?", new String[]{weather5.getBasic().getCity()});
         }
         cursor.close();
     }

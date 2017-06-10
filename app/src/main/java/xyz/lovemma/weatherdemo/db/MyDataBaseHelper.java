@@ -38,9 +38,7 @@ public class MyDataBaseHelper extends SQLiteOpenHelper {
             + "lon real)";
     public static final String MUTILI_CITY = "create table MutiliCity ("
             + "id integer primary key autoincrement, "
-            + "city text, "
-            + "temp text, "
-            + "cond text)";
+            + "city text)";
 
     public MyDataBaseHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);

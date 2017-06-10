@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -17,8 +18,20 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.ObservableSource;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.functions.Action;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.functions.Predicate;
+import io.reactivex.schedulers.Schedulers;
+import xyz.lovemma.weatherdemo.api.RetrofitUtils;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
-import xyz.lovemma.weatherdemo.entity.MulitiCity;
+import xyz.lovemma.weatherdemo.entity.HeWeather5;
+import xyz.lovemma.weatherdemo.entity.Weather;
 import xyz.lovemma.weatherdemo.ui.adapter.MutiliCityAdapter;
 
 public class MulitiCityActivity extends AppCompatActivity {
@@ -31,7 +44,9 @@ public class MulitiCityActivity extends AppCompatActivity {
     FloatingActionButton fab;
     private SQLiteDatabase db;
     private MyDataBaseHelper mDataBaseHelper;
-    private List<MulitiCity> mCityList = new ArrayList<>();
+    private List<HeWeather5> mWeatherList = new ArrayList<>();
+    private MutiliCityAdapter mAdapter;
+    private LocalBroadcastManager mBroadcastManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,11 +69,12 @@ public class MulitiCityActivity extends AppCompatActivity {
                 onBackPressed();
             }
         });
+
         mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
         db = mDataBaseHelper.getWritableDatabase();
-        loadDataFromDB();
-        MutiliCityAdapter adapter = new MutiliCityAdapter(mCityList);
-        adapter.setOnMultiCityClickListener(new MutiliCityAdapter.onMultiCityClickListener() {
+        loadDataFromNetwork();
+        mAdapter = new MutiliCityAdapter(mWeatherList);
+        mAdapter.setOnMultiCityClickListener(new MutiliCityAdapter.onMultiCityClickListener() {
             @Override
             public void onClick(int position) {
                 Intent intent = new Intent(MulitiCityActivity.this, MainActivity.class);
@@ -68,19 +84,94 @@ public class MulitiCityActivity extends AppCompatActivity {
             }
         });
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-        mRecyclerView.setAdapter(adapter);
+        mRecyclerView.setAdapter(mAdapter);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MulitiCityActivity.this, ChoiceCityActivity.class);
+                startActivityForResult(intent, ADD_CITY);
+            }
+        });
+        mBroadcastManager = LocalBroadcastManager.getInstance(this);
     }
 
-    private void loadDataFromDB() {
-        Cursor cursor = db.query("MutiliCity", null, null, null, null, null, null);
-        if (cursor.moveToFirst()) {
-            do {
-                String city = cursor.getString(cursor.getColumnIndex("city"));
-                String cond = cursor.getString(cursor.getColumnIndex("cond"));
-                String temp = cursor.getString(cursor.getColumnIndex("temp"));
-                mCityList.add(new MulitiCity(city, cond, temp));
-            } while (cursor.moveToNext());
-            cursor.close();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            switch (requestCode) {
+                case ADD_CITY:
+                    String city = data.getStringExtra("city");
+                    addData(city);
+                    break;
+            }
         }
     }
+
+    private void addData(String city) {
+        RetrofitUtils.getInstance().fetchWeather(city)
+                .subscribe(new Consumer<Weather>() {
+                    @Override
+                    public void accept(Weather weather) throws Exception {
+                        mWeatherList.add(weather.getHeWeather5().get(0));
+                        mAdapter.notifyItemInserted(mWeatherList.size());
+                    }
+                });
+        Intent intent = new Intent("xyz.lovemma.WeatherDemo.ViewPager_Change");
+        intent.putExtra("change_viewpager", 1);
+        intent.putExtra("city", city);
+        mBroadcastManager.sendBroadcast(intent);
+    }
+
+    public static final int ADD_CITY = 1;
+
+
+    private void loadDataFromNetwork() {
+        Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(ObservableEmitter<String> emitter) throws Exception {
+                Cursor cursor = null;
+                try {
+                    cursor = db.query("MutiliCity", null, null, null, null, null, null);
+                    if (cursor.moveToFirst()) {
+                        do {
+                            String city = cursor.getString(cursor.getColumnIndex("city"));
+                            emitter.onNext(city);
+                        } while (cursor.moveToNext());
+                        emitter.onComplete();
+                    }
+                } finally {
+                    if (cursor != null) cursor.close();
+                }
+            }
+        })
+                .subscribeOn(Schedulers.io())
+                .concatMap(new Function<String, ObservableSource<Weather>>() {
+                    @Override
+                    public ObservableSource<Weather> apply(String s) throws Exception {
+                        return RetrofitUtils.getInstance().fetchWeather(s);
+                    }
+                })
+                .filter(new Predicate<Weather>() {
+                    @Override
+                    public boolean test(Weather weather) throws Exception {
+                        return weather.getHeWeather5().get(0).getStatus().equals("ok");
+                    }
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<Weather>() {
+                    @Override
+                    public void accept(Weather weather) throws Exception {
+                        mWeatherList.add(weather.getHeWeather5().get(0));
+                        mAdapter.notifyItemRangeChanged(0, mWeatherList.size());
+                    }
+                })
+                .doOnComplete(new Action() {
+                    @Override
+                    public void run() throws Exception {
+                    }
+                })
+                .subscribe();
+    }
+
 }
