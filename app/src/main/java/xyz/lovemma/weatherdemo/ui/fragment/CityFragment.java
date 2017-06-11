@@ -16,9 +16,9 @@ import android.view.ViewGroup;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.Unbinder;
+import io.reactivex.functions.Consumer;
 import xyz.lovemma.weatherdemo.R;
 import xyz.lovemma.weatherdemo.api.RetrofitUtils;
-import xyz.lovemma.weatherdemo.api.WeatherCallBack;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.entity.Weather;
@@ -27,7 +27,7 @@ import xyz.lovemma.weatherdemo.ui.adapter.HomeAdapter;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class CityFragment extends Fragment implements WeatherCallBack {
+public class CityFragment extends Fragment {
 
 
     @BindView(R.id.weather_recycler)
@@ -73,7 +73,11 @@ public class CityFragment extends Fragment implements WeatherCallBack {
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
-        RetrofitUtils.fetchWeather(mCity, this);
+        mAdapter = new HomeAdapter();
+        mRecyclerView.setAdapter(mAdapter);
+        mDataBaseHelper = new MyDataBaseHelper(getContext(), "City.db", null, 1);
+        db = mDataBaseHelper.getWritableDatabase();
+        loadDataByNetWork();
     }
 
     @Override
@@ -82,26 +86,26 @@ public class CityFragment extends Fragment implements WeatherCallBack {
         unbinder.unbind();
     }
 
-    @Override
-    public void showWeatherInfo(Weather weather) {
-        HeWeather5 weather5 = weather.getHeWeather5().get(0);
-        mAdapter = new HomeAdapter(weather5);
-        mRecyclerView.setAdapter(mAdapter);
-        mDataBaseHelper = new MyDataBaseHelper(getContext(), "City.db", null, 1);
-        db = mDataBaseHelper.getWritableDatabase();
-        ContentValues values;
-        Cursor cursor = db.query("MutiliCity", null, "city like ?", new String[]{"%" + weather5.getBasic().getCity() + "%"}, null, null, null);
-        if (cursor.getCount() == 0) {
-            values = new ContentValues();
-            values.put("city", weather5.getBasic().getCity());
-            db.insert("MutiliCity", null, values);
-        }
-        cursor.close();
+    public void loadDataByNetWork() {
+        RetrofitUtils.getInstance().fetchWeather(mCity)
+                .doOnNext(new Consumer<Weather>() {
+                    @Override
+                    public void accept(Weather weather) throws Exception {
+                        HeWeather5 weather5 = weather.getHeWeather5().get(0);
+                        mAdapter.setData(weather5);
+                        mAdapter.notifyItemRangeChanged(0,4);
+                        ContentValues values;
+                        Cursor cursor = db.query("MutiliCity", null, "city like ?", new String[]{"%" + weather5.getBasic().getCity() + "%"}, null, null, null);
+                        if (cursor.getCount() == 0) {
+                            values = new ContentValues();
+                            values.put("city", weather5.getBasic().getCity());
+                            db.insert("MutiliCity", null, values);
+                        }
+                        cursor.close();
+                    }
+                })
+                .subscribe();
     }
 
-    @Override
-    public void showError(String e) {
-
-    }
 
 }

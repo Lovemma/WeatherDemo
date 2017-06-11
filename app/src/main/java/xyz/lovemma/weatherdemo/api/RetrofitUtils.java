@@ -1,13 +1,9 @@
 package xyz.lovemma.weatherdemo.api;
 
-import android.support.annotation.NonNull;
-
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
-import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
@@ -54,35 +50,4 @@ public class RetrofitUtils {
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
-    public static void fetchWeather(String city, final WeatherCallBack callBack) {
-        RetrofitUtils.getInstance().mApi.getWeatherList(city, ApiConfig.KEY)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Observer<Weather>() {
-                    @Override
-                    public void onSubscribe(@NonNull Disposable d) {
-
-                    }
-
-                    @Override
-                    public void onNext(@NonNull Weather weather) {
-                        String status = weather.getHeWeather5().get(0).getStatus();
-                        if ("ok".equals(status)) {
-                            callBack.showWeatherInfo(weather);
-                        } else {
-                            callBack.showError(status);
-                        }
-                    }
-
-                    @Override
-                    public void onError(@NonNull Throwable e) {
-                        callBack.showError(e.getMessage());
-                    }
-
-                    @Override
-                    public void onComplete() {
-
-                    }
-                });
-    }
 }

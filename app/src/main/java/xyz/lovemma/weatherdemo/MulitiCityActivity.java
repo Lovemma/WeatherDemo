@@ -11,6 +11,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.View;
 
 import java.util.ArrayList;
@@ -93,6 +94,28 @@ public class MulitiCityActivity extends AppCompatActivity {
             }
         });
         mBroadcastManager = LocalBroadcastManager.getInstance(this);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                int position = viewHolder.getAdapterPosition();
+                if (position != 0) {
+                    db.delete("MutiliCity", "city = ?", new String[]{mWeatherList.get(position).getBasic().getCity()});
+                    mWeatherList.remove(position);
+
+                    Intent intent = new Intent("xyz.lovemma.WeatherDemo.ViewPager_Change");
+                    intent.putExtra("change_viewpager", 2);
+                    intent.putExtra("position", position);
+                    mBroadcastManager.sendBroadcast(intent);
+                }
+                mAdapter.notifyItemChanged(position);
+            }
+        });
+        itemTouchHelper.attachToRecyclerView(mRecyclerView);
     }
 
     @Override

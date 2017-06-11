@@ -1,5 +1,6 @@
 package xyz.lovemma.weatherdemo.ui.adapter;
 
+import android.content.Context;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -14,12 +15,15 @@ import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
+import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 
 /**
  * Created by OO on 2017/6/8.
  */
 
 public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.MultiCityViewHolder> {
+    private Context mContext;
+    private SharedPreferencesUtil mPreferencesUtil;
     private List<HeWeather5> mWeatherList;
     private onMultiCityClickListener mClickListener;
 
@@ -33,6 +37,7 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
 
     @Override
     public MultiCityViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        mContext = parent.getContext();
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_multi_city, parent, false);
         return new MultiCityViewHolder(view);
     }
@@ -83,6 +88,9 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
             city.setText(heWeather5.getBasic().getCity());
             temp.setText(heWeather5.getNow().getTmp() + "°");
             condTxt.setText(heWeather5.getNow().getCond().getTxt());
+            mPreferencesUtil = new SharedPreferencesUtil(mContext);
+            int resId = (int) mPreferencesUtil.get(heWeather5.getNow().getCond().getTxt(), R.drawable.ic_unknow);
+            condImg.setImageResource(resId);
         }
     }
 }

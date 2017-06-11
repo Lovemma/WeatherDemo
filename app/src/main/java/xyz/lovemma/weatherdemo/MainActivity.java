@@ -23,6 +23,12 @@ import android.view.MenuItem;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.entity.Weather;
@@ -91,23 +97,33 @@ public class MainActivity extends AppCompatActivity
     private void loadCityFromDB() {
         mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
         db = mDataBaseHelper.getWritableDatabase();
-        Cursor cursor = db.query("MutiliCity", null, null, null, null, null, null);
-        if (cursor.moveToFirst()) {
-            do {
-                String city = cursor.getString(cursor.getColumnIndex("city"));
-                mPagerAdapter.addFragment(CityFragment.newInstance(city));
-            } while (cursor.moveToNext());
-        }
-        cursor.close();
+        Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(ObservableEmitter<String> e) throws Exception {
+                Cursor cursor = db.query("MutiliCity", null, null, null, null, null, null);
+                if (cursor.moveToFirst()) {
+                    do {
+                        String city = cursor.getString(cursor.getColumnIndex("city"));
+                        e.onNext(city);
+                    } while (cursor.moveToNext());
+                    e.onComplete();
+                }
+                cursor.close();
+            }
+        })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<String>() {
+                    @Override
+                    public void accept(String s) throws Exception {
+                        mPagerAdapter.addFragment(CityFragment.newInstance(s));
+                    }
+                })
+                .subscribe();
+
     }
 
     private void showWeatherInfo(Weather weather) {
-        if (mHomeAdapter == null) {
-            mHomeAdapter = new HomeAdapter(weather.getHeWeather5().get(0));
-        } else {
-            mHomeAdapter.setWeather(weather.getHeWeather5().get(0));
-            mHomeAdapter.notifyItemRangeChanged(0, mHomeAdapter.getItemCount());
-        }
         setNotification(weather.getHeWeather5().get(0));
     }
 
@@ -240,7 +256,7 @@ public class MainActivity extends AppCompatActivity
         switch (id) {
             case R.id.nav_location_city:
                 intent = new Intent(this, MulitiCityActivity.class);
-                startActivity(intent);
+                startActivityForResult(intent, MULTI_CITY);
                 break;
         }
 
@@ -256,7 +272,7 @@ public class MainActivity extends AppCompatActivity
                     mPagerAdapter.addFragment(CityFragment.newInstance(intent.getStringExtra("city")));
                     break;
                 case 2:
-
+                    mPagerAdapter.removeFragment(intent.getIntExtra("position", -1));
                     break;
                 default:
                     break;

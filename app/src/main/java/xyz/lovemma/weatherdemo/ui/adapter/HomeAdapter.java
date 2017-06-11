@@ -35,7 +35,12 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         mWeather = weather;
     }
 
-    public void setWeather(HeWeather5 weather) {
+    public HomeAdapter() {
+
+    }
+
+
+    public void setData(HeWeather5 weather) {
         mWeather = weather;
     }
 
@@ -43,6 +48,8 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         mContext = parent.getContext();
         mSharedPreferencesUtil = new SharedPreferencesUtil(mContext);
+        if (mWeather == null)
+            return null;
         switch (viewType) {
             case ITEM_TYPE_NOW:
                 return new NowViewHolder(LayoutInflater.from(mContext).inflate(R.layout.now, parent, false));
@@ -100,7 +107,7 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemCount() {
-        return (mWeather.getStatus() != null) ? 5 : 0;
+        return (mWeather != null) ? 5 : 0;
     }
 
     class NowViewHolder extends baseViewHolder<HeWeather5> {

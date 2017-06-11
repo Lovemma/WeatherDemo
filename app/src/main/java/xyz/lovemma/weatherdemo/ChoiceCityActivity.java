@@ -16,6 +16,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,16 +63,18 @@ public class ChoiceCityActivity extends AppCompatActivity {
         mAdapter.setOnItemClickListener(new CityAdapter.OnRecyclerViewItemClickListener() {
             @Override
             public void onItemClick(View view, int pos) {
-                Cursor cursor = db.query("MutiliCity", null,"city like ?", new String[]{"%" + mCityList.get(pos).getCityZh() + "%"}, null, null, null);
+                Cursor cursor = db.query("MutiliCity", null, "city like ?", new String[]{"%" + mCityList.get(pos).getCityZh() + "%"}, null, null, null);
                 if (cursor.getCount() == 0) {
                     ContentValues values = new ContentValues();
                     values.put("city", mCityList.get(pos).getCityZh());
                     db.insert("MutiliCity", null, values);
+                    Intent intent = new Intent(ChoiceCityActivity.this, MulitiCityActivity.class);
+                    intent.putExtra("city", mCityList.get(pos).getCityZh());
+                    setResult(RESULT_OK, intent);
+                } else {
+                    Toast.makeText(ChoiceCityActivity.this, "城市已存在", Toast.LENGTH_SHORT).show();
                 }
                 cursor.close();
-                Intent intent = new Intent(ChoiceCityActivity.this, MulitiCityActivity.class);
-                intent.putExtra("city", mCityList.get(pos).getCityZh());
-                setResult(RESULT_OK, intent);
                 onBackPressed();
             }
         });
