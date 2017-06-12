@@ -1,16 +1,24 @@
 package xyz.lovemma.weatherdemo;
 
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
+import android.Manifest;
+import android.app.DialogFragment;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.annotation.NonNull;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.ViewPager;
@@ -18,8 +26,15 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -30,15 +45,13 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
-import xyz.lovemma.weatherdemo.entity.HeWeather5;
-import xyz.lovemma.weatherdemo.entity.Weather;
 import xyz.lovemma.weatherdemo.ui.adapter.CityPagerAdapter;
-import xyz.lovemma.weatherdemo.ui.adapter.HomeAdapter;
 import xyz.lovemma.weatherdemo.ui.fragment.CityFragment;
+import xyz.lovemma.weatherdemo.ui.fragment.HintDialogFragment;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+        implements NavigationView.OnNavigationItemSelectedListener, AMapLocationListener {
     @BindView(R.id.toolbar)
     Toolbar toolbar;
     @BindView(R.id.drawer_layout)
@@ -47,14 +60,17 @@ public class MainActivity extends AppCompatActivity
     NavigationView navigationView;
     @BindView(R.id.viewPager)
     ViewPager viewPager;
-    private HomeAdapter mHomeAdapter;
-    private SharedPreferencesUtil sharedPreferencesUtil;
+    @BindView(R.id.container)
+    CoordinatorLayout container;
     private CityPagerAdapter mPagerAdapter;
     private SQLiteDatabase db;
-    private MyDataBaseHelper mDataBaseHelper;
-    private static final String TAG = "MainActivity";
+    private ViewPagerChangeReceive mReceive;
+    private LocalBroadcastManager mBroadcastManager;
+
+    private AMapLocationClient mLocationClient = null;
 
     public static final int MULTI_CITY = 2;
+    private static final int LOCATION_PERMISSION_CODE = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,8 +78,8 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         initView();
+        initLocation();
         initIcon();
-        initDrawer();
         initBroadcast();
     }
 
@@ -71,91 +87,43 @@ public class MainActivity extends AppCompatActivity
     protected void onDestroy() {
         super.onDestroy();
         mBroadcastManager.unregisterReceiver(mReceive);
+        mLocationClient.onDestroy();
     }
 
-
-    private IntentFilter mIntentFilter;
-    private ViewPagerChangeReceive mReceive;
-    private LocalBroadcastManager mBroadcastManager;
-
-    private void initBroadcast() {
-        mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction("xyz.lovemma.WeatherDemo.ViewPager_Change");
-        mReceive = new ViewPagerChangeReceive();
-        mBroadcastManager = LocalBroadcastManager.getInstance(this);
-        mBroadcastManager.registerReceiver(mReceive, mIntentFilter);
-    }
+    private static final String TAG = "MainActivity";
 
     private void initView() {
         setSupportActionBar(toolbar);
 
         mPagerAdapter = new CityPagerAdapter(getSupportFragmentManager());
-        loadCityFromDB();
         viewPager.setAdapter(mPagerAdapter);
-    }
-
-    private void loadCityFromDB() {
-        mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
-        db = mDataBaseHelper.getWritableDatabase();
-        Observable.create(new ObservableOnSubscribe<String>() {
+        viewPager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
-            public void subscribe(ObservableEmitter<String> e) throws Exception {
-                Cursor cursor = db.query("MutiliCity", null, null, null, null, null, null);
-                if (cursor.moveToFirst()) {
-                    do {
-                        String city = cursor.getString(cursor.getColumnIndex("city"));
-                        e.onNext(city);
-                    } while (cursor.moveToNext());
-                    e.onComplete();
-                }
-                cursor.close();
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+                setTitle("" + mPagerAdapter.getItem(position).getArguments().getString("CITY"));
+                Log.d(TAG, "onPageSelected: " + mPagerAdapter.getItem(position).getArguments().getString("CITY"));
             }
-        })
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .doOnNext(new Consumer<String>() {
-                    @Override
-                    public void accept(String s) throws Exception {
-                        mPagerAdapter.addFragment(CityFragment.newInstance(s));
-                    }
-                })
-                .subscribe();
-
-    }
-
-    private void showWeatherInfo(Weather weather) {
-        setNotification(weather.getHeWeather5().get(0));
-    }
-
-    private void setNotification(HeWeather5 weather) {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendingIntent =
-                PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification.Builder builder = new Notification.Builder(this);
-        Notification notification = builder.setContentIntent(pendingIntent)
-                .setContentTitle(weather.getBasic().getCity())
-                .setContentText(String.format("%s 当前温度: %s℃ ", weather.getNow().getCond().getTxt(), weather.getNow().getTmp()))
-                // 这里部分 ROM 无法成功
-                .setSmallIcon((int) sharedPreferencesUtil.get(weather.getNow().getCond().getTxt(), R.drawable.ic_unknow))
-                .build();
-        notification.flags = Notification.FLAG_ONGOING_EVENT;
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        // tag和id都是可以拿来区分不同的通知的
-        manager.notify(1, notification);
-    }
-
-    private void initDrawer() {
+        });
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
-
         navigationView.setNavigationItemSelectedListener(this);
+        MyDataBaseHelper dataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
+        db = dataBaseHelper.getWritableDatabase();
+    }
+
+    private void initBroadcast() {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("xyz.lovemma.WeatherDemo.ViewPager_Change");
+        mReceive = new ViewPagerChangeReceive();
+        mBroadcastManager = LocalBroadcastManager.getInstance(this);
+        mBroadcastManager.registerReceiver(mReceive, intentFilter);
     }
 
     private void initIcon() {
-        sharedPreferencesUtil = new SharedPreferencesUtil(getApplicationContext());
+        SharedPreferencesUtil sharedPreferencesUtil = new SharedPreferencesUtil(getApplicationContext());
         if (!(boolean) sharedPreferencesUtil.get("IconInit", false)) {
             sharedPreferencesUtil.put("晴", R.drawable.sunny);
             sharedPreferencesUtil.put("多云", R.drawable.cloudy);
@@ -203,12 +171,131 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    private void initLocation() {
+        AMapLocationClientOption locationOption = new AMapLocationClientOption();
+        locationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
+        locationOption.setOnceLocationLatest(true);
+        locationOption.setNeedAddress(true);
+        mLocationClient = new AMapLocationClient(this);
+        mLocationClient.setLocationListener(this);
+        mLocationClient.setLocationOption(locationOption);
+        if (ContextCompat.checkSelfPermission(MainActivity.this,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+                DialogFragment newFragment = HintDialogFragment.newInstance(
+                        R.string.location_description_title,
+                        R.string.location_description_why_we_need_the_permission);
+                newFragment.show(getFragmentManager(), HintDialogFragment.class.getSimpleName());
+            } else {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        LOCATION_PERMISSION_CODE);
+            }
+        } else {
+            mLocationClient.startLocation();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case LOCATION_PERMISSION_CODE:
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    mLocationClient.startLocation();
+                } else {
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                        DialogFragment newFragment = HintDialogFragment.newInstance(
+                                R.string.location_description_title,
+                                R.string.location_description_why_we_need_the_permission);
+                        newFragment.show(getFragmentManager(), HintDialogFragment.class.getSimpleName());
+                        return;
+                    }
+                }
+                return;
+            default:
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    public void doPositiveClick() {
+        String permission = Manifest.permission.ACCESS_FINE_LOCATION;
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{permission},
+                    LOCATION_PERMISSION_CODE);
+        } else {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        }
+    }
+
+    public void doNegativeClick() {
+    }
+
+    @Override
+    public void onLocationChanged(AMapLocation aMapLocation) {
+        if (aMapLocation != null) {
+            if (aMapLocation.getErrorCode() == 0) {
+                Cursor cursor = db.query("MutiliCity", null, "id = ?", new String[]{"1"}, null, null, null);
+                if (cursor.getCount() == 0) {
+                    ContentValues values = new ContentValues();
+                    values.put("city", aMapLocation.getCity());
+                    db.insert("MutiliCity", null, values);
+                } else {
+                    ContentValues values = new ContentValues();
+                    values.put("city", aMapLocation.getCity());
+                    db.update("MutiliCity", values, "id = ?", new String[]{"1"});
+                }
+                cursor.close();
+                setTitle(aMapLocation.getCity());
+                loadCityFromDB();
+            } else {
+                Snackbar.make(container, "定位失败，重试？", Snackbar.LENGTH_SHORT)
+                        .setAction(R.string.alert_dialog_ok, new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                mLocationClient.startLocation();
+                            }
+                        }).show();
+            }
+        }
+    }
+
+    private void loadCityFromDB() {
+        Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(ObservableEmitter<String> e) throws Exception {
+                Cursor cursor = db.query("MutiliCity", null, null, null, null, null, null);
+                if (cursor.moveToFirst()) {
+                    do {
+                        String city = cursor.getString(cursor.getColumnIndex("city"));
+                        e.onNext(city);
+                    } while (cursor.moveToNext());
+                    e.onComplete();
+                }
+                cursor.close();
+            }
+        })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<String>() {
+                    @Override
+                    public void accept(String s) throws Exception {
+                        mPagerAdapter.addFragment(CityFragment.newInstance(s));
+                    }
+                })
+                .subscribe();
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
             switch (requestCode) {
-
                 case MULTI_CITY:
                     int position = data.getIntExtra("position", 0);
                     viewPager.setCurrentItem(position);
@@ -249,7 +336,7 @@ public class MainActivity extends AppCompatActivity
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         Intent intent;
