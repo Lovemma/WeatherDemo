@@ -1,7 +1,6 @@
 package xyz.lovemma.weatherdemo;
 
 import android.Manifest;
-import android.app.DialogFragment;
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -10,9 +9,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.NavigationView;
@@ -47,7 +44,6 @@ import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 import xyz.lovemma.weatherdemo.ui.adapter.CityPagerAdapter;
 import xyz.lovemma.weatherdemo.ui.fragment.CityFragment;
-import xyz.lovemma.weatherdemo.ui.fragment.HintDialogFragment;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 
 public class MainActivity extends AppCompatActivity
@@ -184,10 +180,15 @@ public class MainActivity extends AppCompatActivity
                 != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
                     Manifest.permission.ACCESS_FINE_LOCATION)) {
-                DialogFragment newFragment = HintDialogFragment.newInstance(
-                        R.string.location_description_title,
-                        R.string.location_description_why_we_need_the_permission);
-                newFragment.show(getFragmentManager(), HintDialogFragment.class.getSimpleName());
+//                Snackbar.make(container, "加载默认城市？", Snackbar.LENGTH_LONG)
+//                        .setAction(R.string.alert_dialog_ok, new View.OnClickListener() {
+//                            @Override
+//                            public void onClick(View v) {
+//                                setTitle("成都");
+//                                insertDefaultCityAndLoad("成都");
+//                            }
+//                        }).show();
+                loadCity();
             } else {
                 ActivityCompat.requestPermissions(MainActivity.this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
@@ -206,13 +207,7 @@ public class MainActivity extends AppCompatActivity
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationClient.startLocation();
                 } else {
-                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                        DialogFragment newFragment = HintDialogFragment.newInstance(
-                                R.string.location_description_title,
-                                R.string.location_description_why_we_need_the_permission);
-                        newFragment.show(getFragmentManager(), HintDialogFragment.class.getSimpleName());
-                        return;
-                    }
+                    insertDefaultCityAndLoad("成都");
                 }
                 return;
             default:
@@ -220,52 +215,42 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public void doPositiveClick() {
-        String permission = Manifest.permission.ACCESS_FINE_LOCATION;
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
-            ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{permission},
-                    LOCATION_PERMISSION_CODE);
-        } else {
-            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-            intent.setData(Uri.parse("package:" + getPackageName()));
-            startActivity(intent);
-        }
-    }
-
-    public void doNegativeClick() {
-    }
-
     @Override
-    public void onLocationChanged(AMapLocation aMapLocation) {
+    public void onLocationChanged(final AMapLocation aMapLocation) {
         if (aMapLocation != null) {
             if (aMapLocation.getErrorCode() == 0) {
-                Cursor cursor = db.query("MutiliCity", null, "id = ?", new String[]{"1"}, null, null, null);
-                if (cursor.getCount() == 0) {
-                    ContentValues values = new ContentValues();
-                    values.put("city", aMapLocation.getCity());
-                    db.insert("MutiliCity", null, values);
-                } else {
-                    ContentValues values = new ContentValues();
-                    values.put("city", aMapLocation.getCity());
-                    db.update("MutiliCity", values, "id = ?", new String[]{"1"});
-                }
-                cursor.close();
-                setTitle(aMapLocation.getCity());
-                loadCityFromDB();
+                String city = aMapLocation.getCity();
+                insertDefaultCityAndLoad(city);
+                setTitle(city);
             } else {
-                Snackbar.make(container, "定位失败，重试？", Snackbar.LENGTH_SHORT)
+                Snackbar.make(container, "定位失败,请检查网络后重试", Snackbar.LENGTH_INDEFINITE)
                         .setAction(R.string.alert_dialog_ok, new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
                                 mLocationClient.startLocation();
                             }
                         }).show();
+                loadCity();
             }
         }
     }
 
-    private void loadCityFromDB() {
+    private void insertDefaultCityAndLoad(String city) {
+        Cursor cursor = db.query("MutiliCity", null, "id = ?", new String[]{"1"}, null, null, null);
+        if (cursor.getCount() == 0) {
+            ContentValues values = new ContentValues();
+            values.put("city", city);
+            db.insert("MutiliCity", null, values);
+        } else {
+            ContentValues values = new ContentValues();
+            values.put("city", city);
+            db.update("MutiliCity", values, "id = ?", new String[]{"1"});
+        }
+        cursor.close();
+        loadCity();
+    }
+
+    private void loadCity() {
         Observable.create(new ObservableOnSubscribe<String>() {
             @Override
             public void subscribe(ObservableEmitter<String> e) throws Exception {

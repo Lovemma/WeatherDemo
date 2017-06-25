@@ -34,6 +34,7 @@ import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.entity.Weather;
 import xyz.lovemma.weatherdemo.ui.adapter.MutiliCityAdapter;
+import xyz.lovemma.weatherdemo.utils.CircularAnimUtil;
 
 public class MulitiCityActivity extends AppCompatActivity {
 
@@ -90,7 +91,7 @@ public class MulitiCityActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MulitiCityActivity.this, ChoiceCityActivity.class);
-                startActivityForResult(intent, ADD_CITY);
+                CircularAnimUtil.startActivityForResult(MulitiCityActivity.this, intent, ADD_CITY, fab, R.color.colorAccent);
             }
         });
         mBroadcastManager = LocalBroadcastManager.getInstance(this);
