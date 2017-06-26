@@ -42,8 +42,10 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
+import xyz.lovemma.weatherdemo.ui.activity.AboutActivity;
 import xyz.lovemma.weatherdemo.ui.adapter.CityPagerAdapter;
 import xyz.lovemma.weatherdemo.ui.fragment.CityFragment;
+import xyz.lovemma.weatherdemo.utils.CityListTask;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 
 public class MainActivity extends AppCompatActivity
@@ -75,7 +77,7 @@ public class MainActivity extends AppCompatActivity
         ButterKnife.bind(this);
         initView();
         initLocation();
-        initIcon();
+        initData();
         initBroadcast();
     }
 
@@ -118,7 +120,7 @@ public class MainActivity extends AppCompatActivity
         mBroadcastManager.registerReceiver(mReceive, intentFilter);
     }
 
-    private void initIcon() {
+    private void initData() {
         SharedPreferencesUtil sharedPreferencesUtil = new SharedPreferencesUtil(getApplicationContext());
         if (!(boolean) sharedPreferencesUtil.get("IconInit", false)) {
             sharedPreferencesUtil.put("晴", R.drawable.sunny);
@@ -165,6 +167,12 @@ public class MainActivity extends AppCompatActivity
             sharedPreferencesUtil.put("霾", R.drawable.fog);
             sharedPreferencesUtil.put("IconInit", true);
         }
+
+        Cursor cursor = db.query("City", null, null, null, null, null, null);
+        if (cursor.getCount() == 0) {
+            new CityListTask(this).execute();
+        }
+        cursor.close();
     }
 
     private void initLocation() {
@@ -180,14 +188,6 @@ public class MainActivity extends AppCompatActivity
                 != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
                     Manifest.permission.ACCESS_FINE_LOCATION)) {
-//                Snackbar.make(container, "加载默认城市？", Snackbar.LENGTH_LONG)
-//                        .setAction(R.string.alert_dialog_ok, new View.OnClickListener() {
-//                            @Override
-//                            public void onClick(View v) {
-//                                setTitle("成都");
-//                                insertDefaultCityAndLoad("成都");
-//                            }
-//                        }).show();
                 loadCity();
             } else {
                 ActivityCompat.requestPermissions(MainActivity.this,
@@ -312,9 +312,11 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
+//        if (id == R.id.action_settings) {
+//            Intent intent = new Intent(this, SettingActivity.class);
+//            startActivity(intent);
+//            return true;
+//        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -330,6 +332,11 @@ public class MainActivity extends AppCompatActivity
                 intent = new Intent(this, MulitiCityActivity.class);
                 startActivityForResult(intent, MULTI_CITY);
                 break;
+            case R.id.nav_info:
+                intent = new Intent(this, AboutActivity.class);
+                startActivity(intent);
+                break;
+
         }
 
         drawer.closeDrawer(GravityCompat.START);

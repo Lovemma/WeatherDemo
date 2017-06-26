@@ -1,9 +1,10 @@
-package xyz.lovemma.weatherdemo;
+package xyz.lovemma.weatherdemo.utils;
 
-import android.app.Application;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
-import android.database.Cursor;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.AsyncTask;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -18,54 +19,50 @@ import xyz.lovemma.weatherdemo.db.City;
 import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
 
 /**
- * Created by OO on 2017/6/5.
+ * Created by OO on 2017/6/25.
  */
 
-public class App extends Application {
+public class CityListTask extends AsyncTask<Void, Integer, Boolean> {
     private SQLiteDatabase db;
     private MyDataBaseHelper mDataBaseHelper;
+    private Context mContext;
+    private ProgressDialog mDialog;
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
+    public CityListTask(Context context) {
+        mContext = context;
+        mDialog = new ProgressDialog(mContext);
+        mDataBaseHelper = new MyDataBaseHelper(mContext, "City.db", null, 1);
         db = mDataBaseHelper.getWritableDatabase();
-        Cursor cursor = db.query("City", null, null, null, null, null, null);
-        if (cursor.getCount() == 0) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    setData(getJson("china-city-list.json"));
-                }
-            }).start();
-        }
-        cursor.close();
     }
 
-    private String getJson(String fileName) {
+    @Override
+    protected void onPreExecute() {
+        mDialog.setTitle("初始化数据库中");
+        mDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        mDialog.setCancelable(false);
+        mDialog.setCanceledOnTouchOutside(false);
+        mDialog.setMax(3181);
+        mDialog.show();
+    }
 
+    @Override
+    protected Boolean doInBackground(Void... params) {
         StringBuilder stringBuilder = new StringBuilder();
         try {
             BufferedReader bf = new BufferedReader(new InputStreamReader(
-                    getAssets().open(fileName)));
+                    mContext.getAssets().open("china-city-list.json")));
             String line;
             while ((line = bf.readLine()) != null) {
                 stringBuilder.append(line);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            return false;
         }
-        return stringBuilder.toString();
-    }
-
-    private void setData(String str) {
         Type type = new TypeToken<List<City>>() {
         }.getType();
-        List<City> cities = new Gson().fromJson(str, type);
-
+        List<City> cities = new Gson().fromJson(stringBuilder.toString(), type);
         ContentValues values = new ContentValues();
         for (int i = 0; i < cities.size(); i++) {
-//            Log.d(TAG, "setData: " + cities.get(i).getCityZh());
             values.put("id", cities.get(i).getId());
             values.put("cityEn", cities.get(i).getCityEn());
             values.put("cityZh", cities.get(i).getCityZh());
@@ -80,6 +77,18 @@ public class App extends Application {
             values.put("lon", cities.get(i).getLon());
             db.insert("City", null, values);
             values.clear();
+            publishProgress(1);
         }
+        return true;
+    }
+
+    @Override
+    protected void onPostExecute(Boolean aBoolean) {
+        mDialog.dismiss();
+    }
+
+    @Override
+    protected void onProgressUpdate(Integer... values) {
+        mDialog.incrementProgressBy(1);
     }
 }

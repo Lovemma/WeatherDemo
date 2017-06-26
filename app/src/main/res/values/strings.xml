@@ -13,4 +13,13 @@
     <string name="alert_dialog_cancel">Cancel</string>
     <string name="location_description_title">你能允许定位权限吗?</string>
     <string name="location_description_why_we_need_the_permission">你好,自动定位功能需要获取位置权限。你能允许吗?</string>
+    <string name="source_code">查看项目源码</string>
+    <string name="blog">查看个人博客</string>
+
+    <string-array name="trend_type">
+        <item>曲线</item>
+        <item>折线</item>
+    </string-array>
+    <string name="about">关于项目</string>
+    <string name="open_source">• RxJava: github.com/ReactiveX/RxJava\n• RxAndroid: github.com/ReactiveX/RxAndroid\n• Retrofit: github.com/square/retrofitn\n• ButterKnife: github.com/JakeWharton/butterknife\n• 天气数据来自和风天气\n• 高德定位提供位置定位服务</string>
 </resources>

@@ -8,7 +8,7 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <style name="AppTheme.NoActionBar">
+    <style name="AppTheme.NoActionBar" parent="AppTheme">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
@@ -17,10 +17,12 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light"/>
 
-    <style name="text_shadow">
-        <item name="android:shadowColor">@android:color/darker_gray</item>
-        <item name="android:shadowDx">0</item>
-        <item name="android:shadowDy">1</item>
-        <item name="android:shadowRadius">1</item>
+    <style name="expandedTitleTextAppearance">
+        <item name="android:textSize">32sp</item>
+        <item name="android:textColor">#ffffff</item>
+    </style>
+
+    <style name="collapsedTitleTextAppearance">
+        <item name="android:textColor">#ffffff</item>
     </style>
 </resources>
