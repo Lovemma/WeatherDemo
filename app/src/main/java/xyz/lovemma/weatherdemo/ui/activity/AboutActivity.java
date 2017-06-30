@@ -38,6 +38,12 @@ public class AboutActivity extends AppCompatActivity {
             actionBar.setHomeAsUpIndicator(R.drawable.ic_arrow_back);
         }
         mToolbarLayout.setTitle(getString(R.string.about));
+        mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onBackPressed();
+            }
+        });
     }
 
     @OnClick({R.id.bt_blog, R.id.bt_code, R.id.share})
@@ -50,7 +56,11 @@ public class AboutActivity extends AppCompatActivity {
                 toHtml("https://github.com/Lovemma");
                 break;
             case R.id.share:
-
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT, "欢迎使用“简单天气”，您可以在酷市场下载：http://www.coolapk.com/apk/xyz.lovemma.weatherdemo");
+                startActivity(Intent.createChooser(intent, "分享到..."));
                 break;
         }
     }

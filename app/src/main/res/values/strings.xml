@@ -22,4 +22,6 @@
     </string-array>
     <string name="about">关于项目</string>
     <string name="open_source">• RxJava: github.com/ReactiveX/RxJava\n• RxAndroid: github.com/ReactiveX/RxAndroid\n• Retrofit: github.com/square/retrofitn\n• ButterKnife: github.com/JakeWharton/butterknife\n• 天气数据来自和风天气\n• 高德定位提供位置定位服务</string>
+    <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
 </resources>
