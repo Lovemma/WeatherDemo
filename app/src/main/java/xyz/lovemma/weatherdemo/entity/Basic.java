@@ -1,10 +1,12 @@
 package xyz.lovemma.weatherdemo.entity;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Created by OO on 2017/5/19.
  */
 
-public  class Basic {
+public class Basic {
     /**
      * city : 成都
      * cnty : 中国
@@ -13,12 +15,17 @@ public  class Basic {
      * lon : 104.06573486
      * update : {"loc":"2017-05-19 15:52","utc":"2017-05-19 07:52"}
      */
-
+    @SerializedName("city")
     private String city;
+    @SerializedName("cnty")
     private String cnty;
+    @SerializedName("id")
     private String id;
+    @SerializedName("lat")
     private String lat;
+    @SerializedName("lon")
     private String lon;
+    @SerializedName("update")
     private Update update;
 
     public String getCity() {
@@ -69,13 +76,14 @@ public  class Basic {
         this.update = update;
     }
 
-    public  class Update {
+    public class Update {
         /**
          * loc : 2017-05-19 15:52
          * utc : 2017-05-19 07:52
          */
-
+        @SerializedName("loc")
         private String loc;
+        @SerializedName("utc")
         private String utc;
 
         public String getLoc() {

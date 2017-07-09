@@ -1,9 +1,6 @@
 package xyz.lovemma.weatherdemo;
 
-import android.content.ContentValues;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBar;
@@ -18,6 +15,8 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.litepal.crud.DataSupport;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,8 +30,9 @@ import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.db.City;
-import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
+import xyz.lovemma.weatherdemo.db.MutiliCity;
 import xyz.lovemma.weatherdemo.ui.adapter.CityAdapter;
+import xyz.lovemma.weatherdemo.utils.NetUtil;
 
 public class ChoiceCityActivity extends AppCompatActivity {
 
@@ -42,13 +42,8 @@ public class ChoiceCityActivity extends AppCompatActivity {
     Toolbar mToolbar;
     @BindView(R.id.textView)
     TextView mTextView;
-    private SQLiteDatabase db;
-    private MyDataBaseHelper mDataBaseHelper;
     private List<City> mCityList = new ArrayList<>();
     private CityAdapter mAdapter;
-    private static final String TAG = "ChoiceCityActivity";
-
-
     private SearchView mSearchView;
 
     @Override
@@ -56,25 +51,28 @@ public class ChoiceCityActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_choice_city);
         ButterKnife.bind(this);
-        mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
-        db = mDataBaseHelper.getWritableDatabase();
 
         mAdapter = new CityAdapter(mCityList);
         mAdapter.setOnItemClickListener(new CityAdapter.OnRecyclerViewItemClickListener() {
             @Override
             public void onItemClick(View view, int pos) {
-                Cursor cursor = db.query("MutiliCity", null, "city like ?", new String[]{"%" + mCityList.get(pos).getCityZh() + "%"}, null, null, null);
-                if (cursor.getCount() == 0) {
-                    ContentValues values = new ContentValues();
-                    values.put("city", mCityList.get(pos).getCityZh());
-                    db.insert("MutiliCity", null, values);
-                    Intent intent = new Intent(ChoiceCityActivity.this, MulitiCityActivity.class);
-                    intent.putExtra("city", mCityList.get(pos).getCityZh());
-                    setResult(RESULT_OK, intent);
+                if (NetUtil.isConnected(ChoiceCityActivity.this)) {
+                    List<MutiliCity> cities = DataSupport
+                            .where("city like ?", "%" + mCityList.get(pos).getCityZh() + "%")
+                            .find(MutiliCity.class);
+                    if (cities.size() == 1) {
+                        Toast.makeText(ChoiceCityActivity.this, "城市已存在", Toast.LENGTH_SHORT).show();
+                    } else {
+                        MutiliCity city = new MutiliCity();
+                        city.setCity(mCityList.get(pos).getCityZh());
+                        city.save();
+                        Intent intent = new Intent(ChoiceCityActivity.this, MulitiCityActivity.class);
+                        intent.putExtra("city", mCityList.get(pos).getCityZh());
+                        setResult(RESULT_OK, intent);
+                    }
                 } else {
-                    Toast.makeText(ChoiceCityActivity.this, "城市已存在", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ChoiceCityActivity.this, "请检查网络后重试！", Toast.LENGTH_SHORT).show();
                 }
-                cursor.close();
                 onBackPressed();
             }
         });
@@ -122,28 +120,11 @@ public class ChoiceCityActivity extends AppCompatActivity {
         Observable.create(new ObservableOnSubscribe<City>() {
             @Override
             public void subscribe(ObservableEmitter<City> e) throws Exception {
-                Cursor cursor = null;
-                try {
-                    cursor = db.query("City", null, "cityZh like ? or cityEn like ?", new String[]{"%" + city + "%", "%" + city + "%"}, null, null, null);
-                    if (cursor.moveToFirst()) {
-                        do {
-                            String id = cursor.getString(cursor.getColumnIndex("id"));
-                            String cityEn = cursor.getString(cursor.getColumnIndex("cityEn"));
-                            String cityZh = cursor.getString(cursor.getColumnIndex("cityZh"));
-                            String countryCode = cursor.getString(cursor.getColumnIndex("countryCode"));
-                            String countryEn = cursor.getString(cursor.getColumnIndex("countryEn"));
-                            String countryZh = cursor.getString(cursor.getColumnIndex("countryZh"));
-                            String provinceEn = cursor.getString(cursor.getColumnIndex("provinceEn"));
-                            String provinceZh = cursor.getString(cursor.getColumnIndex("provinceZh"));
-                            String leaderEn = cursor.getString(cursor.getColumnIndex("leaderEn"));
-                            String leaderZh = cursor.getString(cursor.getColumnIndex("leaderZh"));
-                            float lat = cursor.getFloat(cursor.getColumnIndex("lat"));
-                            float lon = cursor.getFloat(cursor.getColumnIndex("lon"));
-                            e.onNext(new City(id, cityEn, cityZh, countryCode, countryEn, countryZh, provinceEn, provinceZh, leaderEn, leaderZh, lat, lon));
-                        } while (cursor.moveToNext());
-                    }
-                } finally {
-                    if (cursor != null) cursor.close();
+                List<City> cities = DataSupport
+                        .where("cityZh like ? or cityEn like ?", "%" + city + "%", "%" + city + "%")
+                        .find(City.class);
+                for (City city1 : cities) {
+                    e.onNext(city1);
                 }
                 e.onComplete();
             }

@@ -1,5 +1,7 @@
 package xyz.lovemma.weatherdemo.entity;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Created by OO on 2017/5/19.
  */
@@ -8,7 +10,7 @@ public class Aqi {
     /**
      * city : {"aqi":"118","co":"1","no2":"29","o3":"223","pm10":"106","pm25":"73","qlty":"轻度污染","so2":"9"}
      */
-
+    @SerializedName("city")
     private City city;
 
     public City getCity() {
@@ -30,14 +32,21 @@ public class Aqi {
          * qlty : 轻度污染
          * so2 : 9
          */
-
+        @SerializedName("aqi")
         private String aqi;
+        @SerializedName("co")
         private String co;
+        @SerializedName("no2")
         private String no2;
+        @SerializedName("o3")
         private String o3;
+        @SerializedName("pm10")
         private String pm10;
-        private String pm25;
+        @SerializedName("pm25")
+        private int pm25;
+        @SerializedName("qlty")
         private String qlty;
+        @SerializedName("so2")
         private String so2;
 
         public String getAqi() {
@@ -80,11 +89,11 @@ public class Aqi {
             this.pm10 = pm10;
         }
 
-        public String getPm25() {
+        public int getPm25() {
             return pm25;
         }
 
-        public void setPm25(String pm25) {
+        public void setPm25(int pm25) {
             this.pm25 = pm25;
         }
 

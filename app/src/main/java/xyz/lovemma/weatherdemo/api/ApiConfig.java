@@ -6,5 +6,5 @@ package xyz.lovemma.weatherdemo.api;
 
 public class ApiConfig {
     public static final String BASE_URL = "https://free-api.heweather.com/v5/";
-    public static final String KEY = "282f3846df6b41178e4a2218ae083ea7";
+    public static final String KEY = "9f138279135342719138d88bef82000a";
 }

@@ -9,10 +9,13 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+
 import java.util.List;
 
 import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
+import xyz.lovemma.weatherdemo.db.MutiliCity;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
@@ -24,15 +27,15 @@ import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.MultiCityViewHolder> {
     private Context mContext;
     private SharedPreferencesUtil mPreferencesUtil;
-    private List<HeWeather5> mWeatherList;
+    private List<MutiliCity> mCities;
     private onMultiCityClickListener mClickListener;
 
-    public MutiliCityAdapter(List<HeWeather5> weatherList) {
-        mWeatherList = weatherList;
+    public MutiliCityAdapter(List<MutiliCity> weatherList) {
+        mCities = weatherList;
     }
 
-    public void setData(List<HeWeather5> weatherList) {
-        mWeatherList = weatherList;
+    public void setData(List<MutiliCity> cityList) {
+        mCities = cityList;
     }
 
     @Override
@@ -44,7 +47,7 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
 
     @Override
     public void onBindViewHolder(MultiCityViewHolder holder, int position) {
-        holder.bind(mWeatherList.get(position));
+        holder.bind(mCities.get(position));
         final int pos = position;
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -64,10 +67,10 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
 
     @Override
     public int getItemCount() {
-        return mWeatherList.size();
+        return mCities.size();
     }
 
-    class MultiCityViewHolder extends baseViewHolder<HeWeather5> {
+    class MultiCityViewHolder extends baseViewHolder<MutiliCity> {
         @BindView(R.id.city)
         TextView city;
         @BindView(R.id.temp)
@@ -84,12 +87,14 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
         }
 
         @Override
-        protected void bind(HeWeather5 heWeather5) {
-            city.setText(heWeather5.getBasic().getCity());
-            temp.setText(heWeather5.getNow().getTmp() + "°");
-            condTxt.setText(heWeather5.getNow().getCond().getTxt());
+        protected void bind(MutiliCity mutiliCity) {
+            city.setText(mutiliCity.getCity());
+            String json = mutiliCity.getJson();
+            HeWeather5 weather = new Gson().fromJson(json, HeWeather5.class);
+            temp.setText(weather.getNow().getTmp() + "°");
+            condTxt.setText(weather.getNow().getCond().getTxt());
             mPreferencesUtil = new SharedPreferencesUtil(mContext);
-            int resId = (int) mPreferencesUtil.get(heWeather5.getNow().getCond().getTxt(), R.drawable.ic_unknow);
+            int resId = (int) mPreferencesUtil.get(weather.getNow().getCond().getTxt(), R.drawable.ic_unknow);
             condImg.setImageResource(resId);
         }
     }

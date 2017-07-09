@@ -11,8 +11,8 @@ import android.widget.TextView;
 
 import butterknife.BindView;
 import xyz.lovemma.weatherdemo.R;
-import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
+import xyz.lovemma.weatherdemo.ui.adapter.viewHolder.baseViewHolder;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
 import xyz.lovemma.weatherdemo.widget.WeatherTrendGraph;
 
@@ -148,7 +148,7 @@ public class HomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         @Override
         protected void bind(HeWeather5 heWeather5) {
             windSpd.setText(heWeather5.getNow().getWind().getSpd());
-            pm25.setText(heWeather5.getAqi().getCity().getPm25());
+            pm25.setText(heWeather5.getAqi().getCity().getPm25() + "");
             hum.setText(heWeather5.getNow().getHum());
         }
     }

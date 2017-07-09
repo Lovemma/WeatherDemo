@@ -11,7 +11,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 
@@ -22,8 +21,6 @@ import xyz.lovemma.weatherdemo.entity.DailyForecast;
 import xyz.lovemma.weatherdemo.utils.DateUtil;
 import xyz.lovemma.weatherdemo.utils.DensityUtil;
 import xyz.lovemma.weatherdemo.utils.SharedPreferencesUtil;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by OO on 2017/4/17.
@@ -79,10 +76,7 @@ public class WeatherTrendGraph extends View {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = getMySize(100, widthMeasureSpec);
-        Log.d(TAG, "onMeasure: " + widthMeasureSpec);
-        Log.d(TAG, "onMeasure: width=" + width);
         int height = getMySize(DensityUtil.dp2px(mContext, 256), heightMeasureSpec);
-        Log.d(TAG, "onMeasure: height=" + height);
         setMeasuredDimension(width, height);
     }
 

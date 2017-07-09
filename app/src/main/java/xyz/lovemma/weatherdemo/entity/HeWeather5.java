@@ -1,5 +1,7 @@
 package xyz.lovemma.weatherdemo.entity;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.List;
 
 /**
@@ -7,13 +9,19 @@ import java.util.List;
  */
 
 public class HeWeather5 {
-
+    @SerializedName("aqi")
     private Aqi aqi;
+    @SerializedName("basic")
     private Basic basic;
+    @SerializedName("now")
     private Now now;
+    @SerializedName("status")
     public String status;
+    @SerializedName("suggestion")
     private Suggestion suggestion;
+    @SerializedName("daily_forecast")
     private List<DailyForecast> daily_forecast;
+    @SerializedName("hourly_forecast")
     private List<HourlyForecast> hourly_forecast;
 
     public Aqi getAqi() {

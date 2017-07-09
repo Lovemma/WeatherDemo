@@ -1,8 +1,6 @@
 package xyz.lovemma.weatherdemo;
 
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.LocalBroadcastManager;
@@ -14,6 +12,10 @@ import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.View;
 
+import com.google.gson.Gson;
+
+import org.litepal.crud.DataSupport;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,15 +24,11 @@ import butterknife.ButterKnife;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Function;
-import io.reactivex.functions.Predicate;
 import io.reactivex.schedulers.Schedulers;
 import xyz.lovemma.weatherdemo.api.RetrofitUtils;
-import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
+import xyz.lovemma.weatherdemo.db.MutiliCity;
 import xyz.lovemma.weatherdemo.entity.HeWeather5;
 import xyz.lovemma.weatherdemo.entity.Weather;
 import xyz.lovemma.weatherdemo.ui.adapter.MutiliCityAdapter;
@@ -44,9 +42,7 @@ public class MulitiCityActivity extends AppCompatActivity {
     RecyclerView mRecyclerView;
     @BindView(R.id.fab)
     FloatingActionButton fab;
-    private SQLiteDatabase db;
-    private MyDataBaseHelper mDataBaseHelper;
-    private List<HeWeather5> mWeatherList = new ArrayList<>();
+    private List<MutiliCity> mCityList = new ArrayList<>();
     private MutiliCityAdapter mAdapter;
     private LocalBroadcastManager mBroadcastManager;
 
@@ -72,10 +68,8 @@ public class MulitiCityActivity extends AppCompatActivity {
             }
         });
 
-        mDataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
-        db = mDataBaseHelper.getWritableDatabase();
-        loadDataFromNetwork();
-        mAdapter = new MutiliCityAdapter(mWeatherList);
+        loadData();
+        mAdapter = new MutiliCityAdapter(mCityList);
         mAdapter.setOnMultiCityClickListener(new MutiliCityAdapter.onMultiCityClickListener() {
             @Override
             public void onClick(int position) {
@@ -105,8 +99,9 @@ public class MulitiCityActivity extends AppCompatActivity {
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
                 int position = viewHolder.getAdapterPosition();
                 if (position != 0) {
-                    db.delete("MutiliCity", "city = ?", new String[]{mWeatherList.get(position).getBasic().getCity()});
-                    mWeatherList.remove(position);
+                    DataSupport
+                            .deleteAll(MutiliCity.class, "city = ?",  mCityList.get(position).getCity());
+                    mCityList.remove(position);
 
                     Intent intent = new Intent("xyz.lovemma.WeatherDemo.ViewPager_Change");
                     intent.putExtra("change_viewpager", 2);
@@ -137,8 +132,15 @@ public class MulitiCityActivity extends AppCompatActivity {
                 .subscribe(new Consumer<Weather>() {
                     @Override
                     public void accept(Weather weather) throws Exception {
-                        mWeatherList.add(weather.getHeWeather5().get(0));
-                        mAdapter.notifyItemInserted(mWeatherList.size());
+                        HeWeather5 weather5 = weather.getHeWeather5().get(0);
+                        String json = new Gson().toJson(weather5);
+                        MutiliCity mutiliCity = new MutiliCity();
+                        mutiliCity.setCity(weather5.getBasic().getCity()+"市");
+                        mutiliCity.setJson(json);
+                        mutiliCity.setTime(System.currentTimeMillis());
+                        mutiliCity.save();
+                        mCityList.add(mutiliCity);
+                        mAdapter.notifyItemInserted(mCityList.size());
                     }
                 });
         Intent intent = new Intent("xyz.lovemma.WeatherDemo.ViewPager_Change");
@@ -150,49 +152,23 @@ public class MulitiCityActivity extends AppCompatActivity {
     public static final int ADD_CITY = 1;
 
 
-    private void loadDataFromNetwork() {
-        Observable.create(new ObservableOnSubscribe<String>() {
+    private void loadData() {
+        Observable.create(new ObservableOnSubscribe<MutiliCity>() {
             @Override
-            public void subscribe(ObservableEmitter<String> emitter) throws Exception {
-                Cursor cursor = null;
-                try {
-                    cursor = db.query("MutiliCity", null, null, null, null, null, null);
-                    if (cursor.moveToFirst()) {
-                        do {
-                            String city = cursor.getString(cursor.getColumnIndex("city"));
-                            emitter.onNext(city);
-                        } while (cursor.moveToNext());
-                        emitter.onComplete();
-                    }
-                } finally {
-                    if (cursor != null) cursor.close();
+            public void subscribe(ObservableEmitter<MutiliCity> emitter) throws Exception {
+                List<MutiliCity> cities = DataSupport.findAll(MutiliCity.class);
+                for (MutiliCity city : cities) {
+                    emitter.onNext(city);
                 }
             }
         })
                 .subscribeOn(Schedulers.io())
-                .concatMap(new Function<String, ObservableSource<Weather>>() {
-                    @Override
-                    public ObservableSource<Weather> apply(String s) throws Exception {
-                        return RetrofitUtils.getInstance().fetchWeather(s);
-                    }
-                })
-                .filter(new Predicate<Weather>() {
-                    @Override
-                    public boolean test(Weather weather) throws Exception {
-                        return weather.getHeWeather5().get(0).getStatus().equals("ok");
-                    }
-                })
                 .observeOn(AndroidSchedulers.mainThread())
-                .doOnNext(new Consumer<Weather>() {
+                .doOnNext(new Consumer<MutiliCity>() {
                     @Override
-                    public void accept(Weather weather) throws Exception {
-                        mWeatherList.add(weather.getHeWeather5().get(0));
-                        mAdapter.notifyItemRangeChanged(0, mWeatherList.size());
-                    }
-                })
-                .doOnComplete(new Action() {
-                    @Override
-                    public void run() throws Exception {
+                    public void accept(MutiliCity city) throws Exception {
+                        mCityList.add(city);
+                        mAdapter.notifyItemRangeChanged(0, mCityList.size());
                     }
                 })
                 .subscribe();

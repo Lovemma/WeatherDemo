@@ -2,13 +2,10 @@ package xyz.lovemma.weatherdemo;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
@@ -23,7 +20,6 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -33,6 +29,11 @@ import com.amap.api.location.AMapLocationClient;
 import com.amap.api.location.AMapLocationClientOption;
 import com.amap.api.location.AMapLocationListener;
 
+import org.litepal.crud.DataSupport;
+import org.litepal.crud.callback.FindMultiCallback;
+
+import java.util.List;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import io.reactivex.Observable;
@@ -41,7 +42,8 @@ import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
-import xyz.lovemma.weatherdemo.db.MyDataBaseHelper;
+import xyz.lovemma.weatherdemo.db.City;
+import xyz.lovemma.weatherdemo.db.MutiliCity;
 import xyz.lovemma.weatherdemo.ui.activity.AboutActivity;
 import xyz.lovemma.weatherdemo.ui.adapter.CityPagerAdapter;
 import xyz.lovemma.weatherdemo.ui.fragment.CityFragment;
@@ -61,7 +63,6 @@ public class MainActivity extends AppCompatActivity
     @BindView(R.id.container)
     CoordinatorLayout container;
     private CityPagerAdapter mPagerAdapter;
-    private SQLiteDatabase db;
     private ViewPagerChangeReceive mReceive;
     private LocalBroadcastManager mBroadcastManager;
 
@@ -88,8 +89,6 @@ public class MainActivity extends AppCompatActivity
         mLocationClient.onDestroy();
     }
 
-    private static final String TAG = "MainActivity";
-
     private void initView() {
         setSupportActionBar(toolbar);
 
@@ -100,7 +99,6 @@ public class MainActivity extends AppCompatActivity
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
                 setTitle("" + mPagerAdapter.getItem(position).getArguments().getString("CITY"));
-                Log.d(TAG, "onPageSelected: " + mPagerAdapter.getItem(position).getArguments().getString("CITY"));
             }
         });
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -108,8 +106,6 @@ public class MainActivity extends AppCompatActivity
         drawer.addDrawerListener(toggle);
         toggle.syncState();
         navigationView.setNavigationItemSelectedListener(this);
-        MyDataBaseHelper dataBaseHelper = new MyDataBaseHelper(this, "City.db", null, 1);
-        db = dataBaseHelper.getWritableDatabase();
     }
 
     private void initBroadcast() {
@@ -168,11 +164,15 @@ public class MainActivity extends AppCompatActivity
             sharedPreferencesUtil.put("IconInit", true);
         }
 
-        Cursor cursor = db.query("City", null, null, null, null, null, null);
-        if (cursor.getCount() == 0) {
-            new CityListTask(this).execute();
-        }
-        cursor.close();
+        DataSupport.findAllAsync(City.class).listen(new FindMultiCallback() {
+            @Override
+            public <T> void onFinish(List<T> t) {
+                List<City> cities = (List<City>) t;
+                if (cities.size() != 3181) {
+                    new CityListTask(MainActivity.this).execute();
+                }
+            }
+        });
     }
 
     private void initLocation() {
@@ -207,7 +207,7 @@ public class MainActivity extends AppCompatActivity
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationClient.startLocation();
                 } else {
-                    insertDefaultCityAndLoad("成都");
+                    insertDefaultCityAndLoad("成都市");
                 }
                 return;
             default:
@@ -223,7 +223,7 @@ public class MainActivity extends AppCompatActivity
                 insertDefaultCityAndLoad(city);
                 setTitle(city);
             } else {
-                Snackbar.make(container, "定位失败,请检查网络后重试", Snackbar.LENGTH_INDEFINITE)
+                Snackbar.make(container, "定位失败,请检查网络后重试", Snackbar.LENGTH_LONG)
                         .setAction(R.string.alert_dialog_ok, new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
@@ -236,17 +236,9 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void insertDefaultCityAndLoad(String city) {
-        Cursor cursor = db.query("MutiliCity", null, "id = ?", new String[]{"1"}, null, null, null);
-        if (cursor.getCount() == 0) {
-            ContentValues values = new ContentValues();
-            values.put("city", city);
-            db.insert("MutiliCity", null, values);
-        } else {
-            ContentValues values = new ContentValues();
-            values.put("city", city);
-            db.update("MutiliCity", values, "id = ?", new String[]{"1"});
-        }
-        cursor.close();
+        MutiliCity city1 = new MutiliCity();
+        city1.setCity(city);
+        city1.saveOrUpdate("id = ?", "1");
         loadCity();
     }
 
@@ -254,15 +246,10 @@ public class MainActivity extends AppCompatActivity
         Observable.create(new ObservableOnSubscribe<String>() {
             @Override
             public void subscribe(ObservableEmitter<String> e) throws Exception {
-                Cursor cursor = db.query("MutiliCity", null, null, null, null, null, null);
-                if (cursor.moveToFirst()) {
-                    do {
-                        String city = cursor.getString(cursor.getColumnIndex("city"));
-                        e.onNext(city);
-                    } while (cursor.moveToNext());
-                    e.onComplete();
+                List<MutiliCity> cities = DataSupport.findAll(MutiliCity.class);
+                for (MutiliCity city : cities) {
+                    e.onNext(city.getCity());
                 }
-                cursor.close();
             }
         })
                 .subscribeOn(Schedulers.io())

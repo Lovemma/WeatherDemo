@@ -1,5 +1,7 @@
 package xyz.lovemma.weatherdemo.entity;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Created by OO on 2017/5/19.
  */
@@ -15,14 +17,21 @@ public class Now {
      * vis : 6
      * wind : {"deg":"209","dir":"东风","sc":"3-4","spd":"12"}
      */
-
+    @SerializedName("cond")
     private Cond cond;
+    @SerializedName("fl")
     private String fl;
+    @SerializedName("hum")
     private String hum;
+    @SerializedName("pcpn")
     private String pcpn;
+    @SerializedName("pres")
     private String pres;
-    private String tmp;
+    @SerializedName("tmp")
+    private int tmp;
+    @SerializedName("vis")
     private String vis;
+    @SerializedName("wind")
     private Wind wind;
 
     public Cond getCond() {
@@ -65,11 +74,11 @@ public class Now {
         this.pres = pres;
     }
 
-    public String getTmp() {
+    public int getTmp() {
         return tmp;
     }
 
-    public void setTmp(String tmp) {
+    public void setTmp(int tmp) {
         this.tmp = tmp;
     }
 
@@ -89,13 +98,14 @@ public class Now {
         this.wind = wind;
     }
 
-    public  class Cond {
+    public class Cond {
         /**
          * code : 100
          * txt : 晴
          */
-
+        @SerializedName("code")
         private String code;
+        @SerializedName("txt")
         private String txt;
 
         public String getCode() {
@@ -115,17 +125,20 @@ public class Now {
         }
     }
 
-    public  class Wind {
+    public class Wind {
         /**
          * deg : 209
          * dir : 东风
          * sc : 3-4
          * spd : 12
          */
-
+        @SerializedName("deg")
         private String deg;
+        @SerializedName("dir")
         private String dir;
+        @SerializedName("sc")
         private String sc;
+        @SerializedName("spd")
         private String spd;
 
         public String getDeg() {
