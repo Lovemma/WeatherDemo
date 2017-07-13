@@ -100,7 +100,7 @@ public class MulitiCityActivity extends AppCompatActivity {
                 int position = viewHolder.getAdapterPosition();
                 if (position != 0) {
                     DataSupport
-                            .deleteAll(MutiliCity.class, "city = ?",  mCityList.get(position).getCity());
+                            .deleteAll(MutiliCity.class, "city = ?", mCityList.get(position).getCity());
                     mCityList.remove(position);
 
                     Intent intent = new Intent("xyz.lovemma.WeatherDemo.ViewPager_Change");
@@ -127,7 +127,7 @@ public class MulitiCityActivity extends AppCompatActivity {
         }
     }
 
-    private void addData(String city) {
+    private void addData(final String city) {
         RetrofitUtils.getInstance().fetchWeather(city)
                 .subscribe(new Consumer<Weather>() {
                     @Override
@@ -135,18 +135,18 @@ public class MulitiCityActivity extends AppCompatActivity {
                         HeWeather5 weather5 = weather.getHeWeather5().get(0);
                         String json = new Gson().toJson(weather5);
                         MutiliCity mutiliCity = new MutiliCity();
-                        mutiliCity.setCity(weather5.getBasic().getCity()+"市");
+                        mutiliCity.setCity(weather5.getBasic().getCity());
                         mutiliCity.setJson(json);
                         mutiliCity.setTime(System.currentTimeMillis());
                         mutiliCity.save();
                         mCityList.add(mutiliCity);
                         mAdapter.notifyItemInserted(mCityList.size());
+                        Intent intent = new Intent("xyz.lovemma.WeatherDemo.ViewPager_Change");
+                        intent.putExtra("change_viewpager", 1);
+                        intent.putExtra("city", city);
+                        mBroadcastManager.sendBroadcast(intent);
                     }
                 });
-        Intent intent = new Intent("xyz.lovemma.WeatherDemo.ViewPager_Change");
-        intent.putExtra("change_viewpager", 1);
-        intent.putExtra("city", city);
-        mBroadcastManager.sendBroadcast(intent);
     }
 
     public static final int ADD_CITY = 1;

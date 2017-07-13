@@ -31,11 +31,11 @@ public class CityListTask extends AsyncTask<Void, Integer, Boolean> {
 
     @Override
     protected void onPreExecute() {
-        mDialog.setTitle("初始化数据库中");
-        mDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        mDialog.setMessage("初始化数据库中");
+        mDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         mDialog.setCancelable(false);
         mDialog.setCanceledOnTouchOutside(false);
-        mDialog.setMax(100);
+//        mDialog.setMax(100);
         mDialog.show();
     }
 
@@ -56,7 +56,7 @@ public class CityListTask extends AsyncTask<Void, Integer, Boolean> {
         List<City> cities = new Gson().fromJson(stringBuilder.toString(), type);
         for (int i = 0; i < cities.size(); i++) {
             cities.get(i).save();
-            publishProgress(i);
+//            publishProgress(i);
         }
         return true;
     }
@@ -69,7 +69,7 @@ public class CityListTask extends AsyncTask<Void, Integer, Boolean> {
 
     @Override
     protected void onProgressUpdate(Integer... values) {
-        int progress = (int) (values[0]*1.0/3181*100);
-        mDialog.incrementProgressBy(progress);
+//        int progress = (int) (values[0]*1.0/3181*100);
+//        mDialog.incrementProgressBy(progress);
     }
 }

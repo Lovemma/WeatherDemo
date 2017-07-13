@@ -88,9 +88,9 @@ public class MutiliCityAdapter extends RecyclerView.Adapter<MutiliCityAdapter.Mu
 
         @Override
         protected void bind(MutiliCity mutiliCity) {
-            city.setText(mutiliCity.getCity());
             String json = mutiliCity.getJson();
             HeWeather5 weather = new Gson().fromJson(json, HeWeather5.class);
+            city.setText(weather.getBasic().getCity());
             temp.setText(weather.getNow().getTmp() + "°");
             condTxt.setText(weather.getNow().getCond().getTxt());
             mPreferencesUtil = new SharedPreferencesUtil(mContext);

@@ -207,7 +207,7 @@ public class MainActivity extends AppCompatActivity
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationClient.startLocation();
                 } else {
-                    insertDefaultCityAndLoad("成都市");
+                    insertDefaultCityAndLoad("成都");
                 }
                 return;
             default:
@@ -220,6 +220,7 @@ public class MainActivity extends AppCompatActivity
         if (aMapLocation != null) {
             if (aMapLocation.getErrorCode() == 0) {
                 String city = aMapLocation.getCity();
+                city = city.replace("市", "");
                 insertDefaultCityAndLoad(city);
                 setTitle(city);
             } else {
